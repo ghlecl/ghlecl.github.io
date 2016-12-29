@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Ghyslain Leclerc">
+    <meta name="description" content="Personnal notes on code.">
+    <meta name="generator" content="Hugo 0.18" />
+
+    
+    <title>My Hugo Setup &middot; @ghlecl’s Code Attempts</title>
+
+    <link rel="stylesheet" href="https://ghlecl.github.io/css/weblog.css" media="screen" charset="utf-8" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/1.2.14/css/lightgallery.min.css" type="text/css" />
+    
+
+
+    
+	<link href="https://ghlecl.github.io/index.xml" rel="alternate" type="application/rss+xml" title="Code Attempts" />
+	
+  </head>
+  <body class="site">
+
+<header>
+  <nav>
+    <h1><a href="https://ghlecl.github.io/">@ghlecl</a>’s Code Attempts.</h1>
+    <div class="menu">
+      
+      <ul>
+        
+            <li>
+              <a href="https://ghlecl.github.io/posts/">Posts</a>
+              
+                <a href="https://ghlecl.github.io/posts/index.xml"><img src="https://ghlecl.github.io/img/rss.svg" class="rss-icon" /></a>
+              
+            </li>
+        
+        <li><a href="https://ghlecl.github.io/about">About</a></li>
+      </ul>
+    </div>
+  </nav>
+</header>
+
+
+  <main class="content">
+
+    <article class="post">
+      
+        <h2><a rel="full-article" href="https://ghlecl.github.io/posts/hugo/">My Hugo Setup</a></h2>
+      
+
+      <div class="postmeta">Posted on <time datetime="2016-02-14 00:00:00 &#43;0000 UTC" pubdate="">February 14, 2016</time> in
+        <span class="categories">
+          
+        </span>
+      </div>
+
+      <p>
+        
+
+<h1 id="hugo">Hugo</h1>
+
+<p>I have decided to go with <a href="https://gohugo.io/">Hugo</a> and <a href="https://pages.github.com/">Github Pages</a> for this note taking blog.  This is simply me describing my setup with Hugo and explaining what I have been able to accomplish to this point.  It is not much, but writing it down helps me clarify my thoughts and insures I don&rsquo;t have to figure it out again (which, ironically, I had to do to write and post this entry!).</p>
+
+<h3 id="static-site-generation-via-hugo">Static site generation via Hugo</h3>
+
+<p>Basically, in Hugo (as in many <a href="https://www.staticgen.com/">static site generators</a>), the idea is to write content in files with a given format (often <a href="https://daringfireball.net/projects/markdown/">markdown</a>) and specify how to build a website out of this content via template/layout files.  Once you run the executable (literally <code>hugo</code>) on the directory structure containing all those content and layout files, a static website is generated.  To mark a file as a content file, you put a YAML or TOML header at the beggining of the file.  Some information in the header is required by Hugo, some is optional and some is custom.</p>
+
+<h3 id="the-setup">The setup</h3>
+
+<p>The executable must know where to look for content and layouts/templates.  It also has to have access to styling elements (CSS and images for instance).  It has default locations where it looks for all those files and pre-supposes a few names, but most of it is configurable.  Here is what I used:</p>
+
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+<th align="center">Kept default ?</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td>base URL</td>
+<td><code>http://ghlecl.github.io/</code></td>
+<td align="center">n/a</td>
+</tr>
+
+<tr>
+<td>contentdir</td>
+<td><code>content</code></td>
+<td align="center">y</td>
+</tr>
+
+<tr>
+<td>layoutdir</td>
+<td><code>templates</code></td>
+<td align="center">n</td>
+</tr>
+
+<tr>
+<td>publishDir</td>
+<td><code>public</code></td>
+<td align="center">y</td>
+</tr>
+
+<tr>
+<td>dataDir</td>
+<td><code>data</code></td>
+<td align="center">y</td>
+</tr>
+
+<tr>
+<td>publishdir</td>
+<td><code>public</code></td>
+<td align="center">y</td>
+</tr>
+
+<tr>
+<td>staticdir</td>
+<td><code>static</code></td>
+<td align="center">y</td>
+</tr>
+</tbody>
+</table>
+
+<p>Unfortunately, capitalization matters and is not consistent.  All the variables available can be <a href="https://gohugo.io/overview/configuration/">found</a> on the Hugo site.</p>
+
+<h3 id="versioning-and-publishing">Versioning and publishing</h3>
+
+<p>To keep versions of all my posts and the site, I will be using <a href="https://git-scm.com/">Git</a> as my version control software, unsurprisingly as I am publishing on Github Pages.  I have made a setup inspired by the <a href="https://gohugo.io/tutorials/github-pages-blog/">tutorial</a>, but not exactly as they suggest.</p>
+
+<p>I actually want to keep my drafts private.  If I decide to commit drafts to the version control in order to work on ideas, I do not want all those draft versions with typos, bad sentences, bad ideas and brainstorming to be seen by everyone.  A private Git repository is needed for that and since I have not yet decided to pay for a private Github account, I cannot have a private repository on that site.  To get a private repository, I have chosen to use <a href="https://bitbucket.org/">Bitbucket</a>.  With that provider, I can get 5 private repositories for free.  Thus, I have a private Git repository for my site.  This is also where I keep my template code and everything that Hugo needs to create the site.  I do not version the public directory in that repository.  To insure that, it is added to the .gitignore file.</p>
+
+<p>Actually, were it not for the fact that the way Github Pages work is to publish the master branch of a repository, I would not need another repository.  I would simply version the raw materials Hugo needs and I would replace the public content on the public server knowing that I can regenerate a version whenever I want for the foreseeable future.  That being said, I cannot do that because Github pages actually simply serves the last commit of master on your personal page (username.github.io) or the latest commit of the gh-pages branch for a project page.  In any case, I need a repository with at least one commit.  Whenever I want to publish the site, I make a commit in the development git repository and tag it as a site release with the date.  Then, I delete everything inside the public directory except the .git folder and regenerate the site with Hugo.  Any content that is not set to draft gets generated.  After that, I <code>cd</code> into the public folder (the public git repository), make a commit and push.  Voilà, the site is updated.</p>
+
+<p>I cannot predict what problems I&rsquo;ll have with this setup, but for now, it seems fine and so I&rsquo;ll run with it.  I&rsquo;ll write another post later if I have to make changes.</p>
+
+      </p>
+    </article>
+
+
+  </main>
+
+<footer>
+  <div class="footer_text">
+      <div>
+        <h3>Hi, <a href="https://ghlecl.github.io/about">I'm Ghyslain</a></h3>
+        <p>
+          I am a medical physicist by day and a hobby programmer by night.
+
+
+You can follow me on <a href="http://twitter.com/ghlecl">Twitter</a> and on <a href="http://github.com/ghlecl">GitHub</a>.
+
+        </p>
+      </div>
+      
+  </div>
+
+  
+    <div class="footer_copyright">
+      &copy; 2016 <a href="https://ghlecl.github.io/about">Ghyslain Leclerc</a>
+       - Made in Quebec, Canada
+    </div>
+  
+</footer>
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/2.2.0/jquery.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/1.2.14/js/lightgallery-all.min.js" charset="utf-8"></script>
+    <script src="https://ghlecl.github.io/js/weblog.js" charset="utf-8"></script>
+    
+
+    <script type="text/javascript">
+
+  
+  $(function() {
+    
+    $.getJSON("https://api.flickr.com/services/feeds/photos_public.gne?id=&format=json&jsoncallback=?", function(data) {
+      iweblog.application.displayImages(data, 8);
+    });
+  });
+
+</script>
+
+    
+  </body>
+</html>
+

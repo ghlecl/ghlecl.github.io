@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+
+    <title>@ghlecl’s Code Attempts - Posts</title>
+    <link>https://ghlecl.github.io/posts/index.xml</link>
+    <description>All entries in Posts on Code Attempts</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    
+    <lastBuildDate>Sun, 20 Mar 2016 00:00:00 +0000</lastBuildDate>
+    <atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
+    
+      
+      <item>
+        <title>Timing pieces of code</title>
+        <link>https://ghlecl.github.io/posts/cxx_time_it/</link>
+        <pubDate>Sun, 20 Mar 2016 00:00:00 +0000</pubDate>
+        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
+        <guid>https://ghlecl.github.io/posts/cxx_time_it/</guid>
+        <description>
+
+&lt;h1 id=&#34;execution-time-measurements&#34;&gt;Execution time measurements&lt;/h1&gt;
+
+&lt;h3 id=&#34;python-s-timeit-and-repeat&#34;&gt;Python&amp;rsquo;s timeit and repeat&lt;/h3&gt;
+
+&lt;p&gt;I sometimes want to time my code to see which version of a function I wrote runs faster.  I know that you should &lt;em&gt;&lt;strong&gt;always&lt;/strong&gt;&lt;/em&gt; profile before you optimize and that &lt;a href=&#34;https://en.wikipedia.org/wiki/Benchmark_%28computing%29#Types_of_benchmarks&#34;&gt;micro-benchmarking&lt;/a&gt; has &lt;a href=&#34;http://stackoverflow.com/a/2842707&#34;&gt;lots of caveats&lt;/a&gt; (some of which I have myself fallen victim to), but still, sometimes, curiosity gets the best of me and I just have to know.  When I am writing in Python, I use the &lt;code&gt;timeit&lt;/code&gt; &lt;a href=&#34;https://docs.python.org/3/library/timeit.html?highlight=timeit#module-timeit&#34;&gt;module&lt;/a&gt; to measure code execution.  This handy module has two main utility functions: &lt;code&gt;timeit&lt;/code&gt; and &lt;code&gt;repeat&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;timeit&lt;/code&gt; will run a piece of code &lt;code&gt;n&lt;/code&gt; times while measuring the execution time of each repetition.  It then gives back the lowest time, which is arguably the time needed to run the code when nothing else on the system is interfering.  Of course, when the code will be run, other things will want CPU time alongside your program and the OS will have to balance it all, but &lt;em&gt;usually&lt;/em&gt;, that should not be taken into account when doing micro-benchmarks.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;repeat&lt;/code&gt; will again run a piece of code &lt;code&gt;n&lt;/code&gt; times, but will repeat that experiment &lt;code&gt;r&lt;/code&gt; times, returning a list with the lowest execution time of each repetition of the experiment.  The following snippet shows how to use both of them in code.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;from timeit import timeit, repeat
+
+n = 1000
+r = 2
+times_repeat = repeat( &amp;quot;def Fn( x ): return x**2;myFn( 4 )&amp;quot;, repeat = r, number = n )
+times_timeit = []
+for idx in range( r ):
+    times_timeit.append( timeit( &amp;quot;def Fn( x ): return x**2;myFn( 4 )&amp;quot;, number = n ) )
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;There are two other ways to use the &lt;code&gt;timeit&lt;/code&gt; module, namely via the command line with the executable module syntax and using an interactive Python shell like &lt;a href=&#34;https://ipython.org/&#34;&gt;iPython&lt;/a&gt; which has the magic function &lt;code&gt;%timeit&lt;/code&gt;.  I won&amp;rsquo;t cover those subjects here.&lt;/p&gt;
+
+&lt;h3 id=&#34;trying-it-out-in-c-time-it&#34;&gt;Trying it out in C++ : time_it&lt;/h3&gt;
+
+&lt;p&gt;The thing is, I don&amp;rsquo;t always do things in Python and I wanted to have a function similar to &lt;code&gt;timeit&lt;/code&gt; which would allow me to measure the execution time of a function or piece of code in C++.  It turns out that with C++14 (don&amp;rsquo;t know if C++11 is sufficient, but C++17/C++1z will make it easier I think), it is possible to get close to it.  When I got the idea, I started to think about the &lt;a href=&#34;http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4169.html&#34;&gt;proposed&lt;/a&gt; &lt;code&gt;std::invoke&lt;/code&gt; function that should (or has?) make it into the next standard.  This function template takes a function, it&amp;rsquo;s arguments and invokes it.  This is pretty close to what I need.  Coupling the facilities of &lt;code&gt;std::chrono&lt;/code&gt; with that function could actually get me pretty close to what I want.  Because some compilers do not yet have an implementation of &lt;code&gt;std::invoke&lt;/code&gt;, I had to first find one or write one.  I decided to use the implementation found on &lt;a href=&#34;http://en.cppreference.com/w/cpp/utility/functional/invoke&#34;&gt;cppreference.com&lt;/a&gt;.  But let&amp;rsquo;s pretend that std::invoke is availble.  Then, one can write the function template &lt;code&gt;time_it&lt;/code&gt;&lt;sup&gt;[1]&lt;/sup&gt; using &lt;code&gt;std::invoke&lt;/code&gt; and &lt;code&gt;std::chrono&lt;/code&gt;.  This is the resulting function for those who do not want to read the steps I went through:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;template&amp;lt;
+   unsigned int repeat_invoke = 1000,
+   unsigned int repeat_meas = 3,
+   typename F, typename... ArgTypes
+        &amp;gt;
+std::array&amp;lt; double, repeat_meas &amp;gt;
+time_it( F&amp;amp;&amp;amp; f, ArgTypes&amp;amp;&amp;amp;... args )
+{
+   using std::chrono::high_resolution_clock;
+   using std::chrono::duration_cast;
+   using std::numeric_limits;
+   using std::chrono::nanoseconds;
+
+   static_assert( repeat_invoke &amp;gt;= 1,
+            &amp;quot;time_it: The number of times the code experiment is \
+                                          repeated has to be at least 1.&amp;quot; );
+   static_assert( repeat_meas &amp;gt;= 1,
+            &amp;quot;time_it: The number of times the code is run has to \
+                                                          be at least 1.&amp;quot; );
+
+   double max_dbl = numeric_limits&amp;lt;double&amp;gt;::max();
+   double cur_min = max_dbl;
+   std::array&amp;lt; double, repeat_meas &amp;gt; shortest_times;
+   for( unsigned int meas_idx( 0 ); meas_idx != repeat_meas; ++meas_idx )
+   {
+      for( unsigned int invoke_idx( 0 ); invoke_idx != repeat_invoke; ++invoke_idx )
+      {
+         auto start = high_resolution_clock::now();
+
+         std::invoke( std::forward&amp;lt;F&amp;gt;(f), std::forward&amp;lt;ArgTypes&amp;gt;(args)... );
+
+         auto elapsed = duration_cast&amp;lt; nanoseconds &amp;gt;(
+                        high_resolution_clock::now() - start ).count();
+
+         if( elapsed &amp;lt; cur_min ) { cur_min = elapsed; }
+      }
+      shortest_times[meas_idx] = cur_min;
+      cur_min = max_dbl;
+   }
+
+   return shortest_times;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;I skipped the includes in this code snippet.  I am not pretending this code is exception safe, thread safe or any other kind of safe there is.  I am not suggesting anybody else should use it.  It&amp;rsquo;s simply something I find useful.&lt;/p&gt;
+
+&lt;h3 id=&#34;how-i-got-there&#34;&gt;How I got there&lt;/h3&gt;
+
+&lt;p&gt;Basically, aside from the boiler plate stuff, the function is one that takes another function and its parameters as input, and then outputs the minimum time taken to execute the code.  The initial declaration could be written as follows:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;template&amp;lt; typename F, typename... ArgTypes &amp;gt;
+double time_it( F&amp;amp;&amp;amp; f, ArgTypes&amp;amp;&amp;amp;... args );
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This definition uses variadic templates.  You can find information on variadic templates on &lt;a href=&#34;https://en.wikipedia.org/wiki/Variadic_template&#34;&gt;various&lt;/a&gt; &lt;a href=&#34;http://en.cppreference.com/w/cpp/language/parameter_pack&#34;&gt;sites&lt;/a&gt;.  The problem I had with that first iteration is that I could not specify the number of repetitions or the number of times I wanted to run the timing experiment (equivalent to the &lt;code&gt;n&lt;/code&gt; and &lt;code&gt;r&lt;/code&gt; parameters of Python&amp;rsquo;s &lt;code&gt;timeit&lt;/code&gt;).  I had to find a way to do that which would allow for default values as well, since I did not want to specify those arguments every time I call the function.  To be able to use default values in C++, the defaulted parameters have to be last (no keyword arguments in C++ land).  That presented a problem because I also have to have a parameter pack.  So to work around that, I introduced two defaulted template arguments like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;template&amp;lt;
+   unsigned int repeat_invoke = 1000,
+   unsigned int repeat_meas = 3,
+   typename F,
+   typename... ArgTypes
+        &amp;gt;
+std::array&amp;lt; double, repeat_meas &amp;gt;
+time_it( F&amp;amp;&amp;amp; f, ArgTypes&amp;amp;&amp;amp;... args );
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Sorry for the reformatting of the template declaration.  I must admit I struggle to have a consistent formatting for templates.  I find nothing is completely satisfying.  I should probably just use &lt;a href=&#34;http://clang.llvm.org/docs/ClangFormat.html&#34;&gt;Clang Format&lt;/a&gt;.  Anyhow, back to my function.  The addition of the two template arguments allowed me to change the return type to an array and I now have the functionality I want: I can specify, albeit as template parameters, the number of repetitions and the number of invocations at the call site.  All that was left to do was write the timing code, since the function invocation itself is simply:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;std::invoke( std::forward&amp;lt;F&amp;gt;(f), std::forward&amp;lt;ArgTypes&amp;gt;(args)... );
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The use of &lt;code&gt;std::forward&lt;/code&gt; in the code here is for efficiency.  The timing code is based on &lt;code&gt;std::chrono::high_resolution_clock&lt;/code&gt;.  I chose to simply record the time before the invocation with &lt;code&gt;std::chrono::high_resolution_clock::now()&lt;/code&gt; and do the same after.  The difference is the elapsed time.  The choice of the clock could be discussed.  The most important thing is for the clock to be steady.&lt;/p&gt;
+
+&lt;h3 id=&#34;example-test&#34;&gt;Example / test&lt;/h3&gt;
+
+&lt;p&gt;I have written a function which will make the current thread sleep for ten milliseconds.  Then, I have used my new &lt;code&gt;time_it&lt;/code&gt; function to time the execution of the defined function.  The code is reproduced here and actually serves as a usage example.  There are also two calls with a lambda function, one taking arguments.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;void my_fn()
+{
+   using namespace std::chrono_literals;
+   std::this_thread::sleep_for( 10ms );
+}
+
+int main( int argc, char* argv[] )
+{
+   // get times
+   auto test_val_0 = time_it( my_fn );
+   auto test_val_1 = time_it&amp;lt; 100, 6 &amp;gt;( my_fn );
+   auto test_val_2 = time_it&amp;lt; 500 &amp;gt;( my_fn );
+   auto test_val_3 = time_it&amp;lt; 1000, 2 &amp;gt;( my_fn );
+   auto test_val_4 = time_it&amp;lt; 1000, 8 &amp;gt;( [](){
+            using namespace std::chrono_literals;
+            std::this_thread::sleep_for( 5ms );
+         } );
+   auto test_val_5 = time_it&amp;lt; 1000, 3 &amp;gt;( []( int lt, int rt ){
+            return lt - rt;
+         }, 5, 7 );
+
+   // output results
+   std::cout &amp;lt;&amp;lt; &amp;quot;exp 0: [ &amp;quot; &amp;lt;&amp;lt; test_val_0[0] / 1000000.0
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_0[1] / 1000000.0
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_0[2] / 1000000.0 &amp;lt;&amp;lt; &amp;quot; ]\n&amp;quot;;
+   std::cout &amp;lt;&amp;lt; &amp;quot;exp 1: [ &amp;quot; &amp;lt;&amp;lt; test_val_1[0] / 1000000.0
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_1[1] / 1000000.0
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_1[2] / 1000000.0
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_1[3] / 1000000.0
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_1[4] / 1000000.0
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_1[5] / 1000000.0 &amp;lt;&amp;lt; &amp;quot; ]\n&amp;quot;;
+   std::cout &amp;lt;&amp;lt; &amp;quot;exp 2: [ &amp;quot; &amp;lt;&amp;lt; test_val_2[0] / 1000000.0
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_2[1] / 1000000.0
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_2[2] / 1000000.0 &amp;lt;&amp;lt; &amp;quot; ]\n&amp;quot;;
+   std::cout &amp;lt;&amp;lt; &amp;quot;exp 3: [ &amp;quot; &amp;lt;&amp;lt; test_val_3[0] / 1000000.0
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_3[1] / 1000000.0 &amp;lt;&amp;lt; &amp;quot; ]\n&amp;quot;;
+   std::cout &amp;lt;&amp;lt; &amp;quot;exp 4: [ &amp;quot; &amp;lt;&amp;lt; test_val_4[0] / 1000000.0
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_4[1] / 1000000.0
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_4[2] / 1000000.0
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_4[3] / 1000000.0
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_4[4] / 1000000.0
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_4[5] / 1000000.0
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_4[6] / 1000000.0
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_4[7] / 1000000.0 &amp;lt;&amp;lt; &amp;quot; ]\n&amp;quot;;
+   std::cout &amp;lt;&amp;lt; &amp;quot;exp 5: [ &amp;quot; &amp;lt;&amp;lt; test_val_5[0]
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_5[1]
+             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_5[2] &amp;lt;&amp;lt; &amp;quot; ]\n&amp;quot;;
+   return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;and the output on my machine is:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;exp 0: [ 10.0203, 10.0184, 10.0266 ]
+exp 1: [ 10.0465, 10.0373, 10.0241, 10.0198, 10.0214, 10.0243 ]
+exp 2: [ 10.0152, 10.0176, 10.0305 ]
+exp 3: [ 10.02, 10.0174 ]
+exp 4: [ 5.01679, 5.01788, 5.01327, 5.01883, 5.02777, 5.02198, 5.01831, 5.01463 ]
+exp 5: [ 55, 55, 55 ]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;which, for the four first cases, is slightly more than 10ms and is what was expected.  The expected value for the experiment labelled 4 is slightly higher than 5ms and for the last lambda, it should be in the nanoseconds range, which it is.  Of course, the constant value is suspicious and probably means the actual value is actually lower, but the &lt;code&gt;time_it&lt;/code&gt; overhead and the clock precision is so that nothing below the 55ns value can be measured on my machine.  I have not determined the error bar on the time measurement.  This is a complex subject and much more work would be needed to test for that.  One other thing I have not tried in this example is the timing of a member function, but it should work.&lt;/p&gt;
+
+&lt;h3 id=&#34;what-is-impossible&#34;&gt;What is impossible&lt;/h3&gt;
+
+&lt;p&gt;There are things I have found are not possible with the function as it stands.  One of them is the inability to pass &lt;code&gt;time_it&lt;/code&gt; a template function as an argument without specifying the template arguments of the passed in (or timed) function.  I might be wrong, but I have not found a way to do that.  Explicit argument passing is tedious and so &lt;code&gt;time_it&lt;/code&gt; might not be very useful in those cases.&lt;/p&gt;
+
+&lt;p&gt;One other capability Python&amp;rsquo;s &lt;code&gt;timeit&lt;/code&gt; has that this one does not is the ability to accept setup code which is executed before the experiment is run.  I am not sure how useful that would be in the context of C++.  Of course, I can&amp;rsquo;t imagine what others would use &lt;code&gt;time_it&lt;/code&gt; for, so it might be useful even though I can&amp;rsquo;t see it, but I am not writing the STL!  It&amp;rsquo;s just that in my view, since C++ is compiled and not interpreted, &lt;code&gt;time_it&lt;/code&gt; will still require a main function and an executable to run, unlike Python&amp;rsquo;s &lt;code&gt;timeit&lt;/code&gt; which can be run on the fly from the command line to test something out.  To my mind, the setup code can then be written in the main function to no real cost compared to having it done in the &lt;code&gt;time_it&lt;/code&gt; function.  That being said, I believe it would be possible to accept a setup function by making the input of &lt;code&gt;time_it&lt;/code&gt; two tuples of function and arguments, the first being the function to test and the second being the setup function.  I am just not 100% certain that it would be useful and I cannot say for sure that it can be done because I have not tried implementing it.  In my opinion, it would make calling the function without setup code much uglier.  Maybe an overload taking two tuples and the current version could live together and that would allow the functionality at &amp;ldquo;no cost&amp;rdquo;.&lt;/p&gt;
+
+&lt;p&gt;Anyhow, those are my thoughts on the matter for now.&lt;/p&gt;
+
+&lt;h3 id=&#34;notes&#34;&gt;Notes&lt;/h3&gt;
+
+&lt;p&gt;&lt;sup&gt;[1]&lt;/sup&gt; I chose the name with an underscore to differenciate the function from its Python counterpart since my version does not do &lt;em&gt;exactly&lt;/em&gt; all the stuff the python version can!&lt;/p&gt;
+</description>
+      </item>
+      
+    
+      
+      <item>
+        <title>My Hugo Setup</title>
+        <link>https://ghlecl.github.io/posts/hugo/</link>
+        <pubDate>Sun, 14 Feb 2016 00:00:00 +0000</pubDate>
+        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
+        <guid>https://ghlecl.github.io/posts/hugo/</guid>
+        <description>
+
+&lt;h1 id=&#34;hugo&#34;&gt;Hugo&lt;/h1&gt;
+
+&lt;p&gt;I have decided to go with &lt;a href=&#34;https://gohugo.io/&#34;&gt;Hugo&lt;/a&gt; and &lt;a href=&#34;https://pages.github.com/&#34;&gt;Github Pages&lt;/a&gt; for this note taking blog.  This is simply me describing my setup with Hugo and explaining what I have been able to accomplish to this point.  It is not much, but writing it down helps me clarify my thoughts and insures I don&amp;rsquo;t have to figure it out again (which, ironically, I had to do to write and post this entry!).&lt;/p&gt;
+
+&lt;h3 id=&#34;static-site-generation-via-hugo&#34;&gt;Static site generation via Hugo&lt;/h3&gt;
+
+&lt;p&gt;Basically, in Hugo (as in many &lt;a href=&#34;https://www.staticgen.com/&#34;&gt;static site generators&lt;/a&gt;), the idea is to write content in files with a given format (often &lt;a href=&#34;https://daringfireball.net/projects/markdown/&#34;&gt;markdown&lt;/a&gt;) and specify how to build a website out of this content via template/layout files.  Once you run the executable (literally &lt;code&gt;hugo&lt;/code&gt;) on the directory structure containing all those content and layout files, a static website is generated.  To mark a file as a content file, you put a YAML or TOML header at the beggining of the file.  Some information in the header is required by Hugo, some is optional and some is custom.&lt;/p&gt;
+
+&lt;h3 id=&#34;the-setup&#34;&gt;The setup&lt;/h3&gt;
+
+&lt;p&gt;The executable must know where to look for content and layouts/templates.  It also has to have access to styling elements (CSS and images for instance).  It has default locations where it looks for all those files and pre-supposes a few names, but most of it is configurable.  Here is what I used:&lt;/p&gt;
+
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Parameter&lt;/th&gt;
+&lt;th&gt;Value&lt;/th&gt;
+&lt;th align=&#34;center&#34;&gt;Kept default ?&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;base URL&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;http://ghlecl.github.io/&lt;/code&gt;&lt;/td&gt;
+&lt;td align=&#34;center&#34;&gt;n/a&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;contentdir&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;content&lt;/code&gt;&lt;/td&gt;
+&lt;td align=&#34;center&#34;&gt;y&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;layoutdir&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;templates&lt;/code&gt;&lt;/td&gt;
+&lt;td align=&#34;center&#34;&gt;n&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;publishDir&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;public&lt;/code&gt;&lt;/td&gt;
+&lt;td align=&#34;center&#34;&gt;y&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;dataDir&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;data&lt;/code&gt;&lt;/td&gt;
+&lt;td align=&#34;center&#34;&gt;y&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;publishdir&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;public&lt;/code&gt;&lt;/td&gt;
+&lt;td align=&#34;center&#34;&gt;y&lt;/td&gt;
+&lt;/tr&gt;
+
+&lt;tr&gt;
+&lt;td&gt;staticdir&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;static&lt;/code&gt;&lt;/td&gt;
+&lt;td align=&#34;center&#34;&gt;y&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Unfortunately, capitalization matters and is not consistent.  All the variables available can be &lt;a href=&#34;https://gohugo.io/overview/configuration/&#34;&gt;found&lt;/a&gt; on the Hugo site.&lt;/p&gt;
+
+&lt;h3 id=&#34;versioning-and-publishing&#34;&gt;Versioning and publishing&lt;/h3&gt;
+
+&lt;p&gt;To keep versions of all my posts and the site, I will be using &lt;a href=&#34;https://git-scm.com/&#34;&gt;Git&lt;/a&gt; as my version control software, unsurprisingly as I am publishing on Github Pages.  I have made a setup inspired by the &lt;a href=&#34;https://gohugo.io/tutorials/github-pages-blog/&#34;&gt;tutorial&lt;/a&gt;, but not exactly as they suggest.&lt;/p&gt;
+
+&lt;p&gt;I actually want to keep my drafts private.  If I decide to commit drafts to the version control in order to work on ideas, I do not want all those draft versions with typos, bad sentences, bad ideas and brainstorming to be seen by everyone.  A private Git repository is needed for that and since I have not yet decided to pay for a private Github account, I cannot have a private repository on that site.  To get a private repository, I have chosen to use &lt;a href=&#34;https://bitbucket.org/&#34;&gt;Bitbucket&lt;/a&gt;.  With that provider, I can get 5 private repositories for free.  Thus, I have a private Git repository for my site.  This is also where I keep my template code and everything that Hugo needs to create the site.  I do not version the public directory in that repository.  To insure that, it is added to the .gitignore file.&lt;/p&gt;
+
+&lt;p&gt;Actually, were it not for the fact that the way Github Pages work is to publish the master branch of a repository, I would not need another repository.  I would simply version the raw materials Hugo needs and I would replace the public content on the public server knowing that I can regenerate a version whenever I want for the foreseeable future.  That being said, I cannot do that because Github pages actually simply serves the last commit of master on your personal page (username.github.io) or the latest commit of the gh-pages branch for a project page.  In any case, I need a repository with at least one commit.  Whenever I want to publish the site, I make a commit in the development git repository and tag it as a site release with the date.  Then, I delete everything inside the public directory except the .git folder and regenerate the site with Hugo.  Any content that is not set to draft gets generated.  After that, I &lt;code&gt;cd&lt;/code&gt; into the public folder (the public git repository), make a commit and push.  Voilà, the site is updated.&lt;/p&gt;
+
+&lt;p&gt;I cannot predict what problems I&amp;rsquo;ll have with this setup, but for now, it seems fine and so I&amp;rsquo;ll run with it.  I&amp;rsquo;ll write another post later if I have to make changes.&lt;/p&gt;
+</description>
+      </item>
+      
+    
+      
+      <item>
+        <title>Static Site</title>
+        <link>https://ghlecl.github.io/posts/staticsite/</link>
+        <pubDate>Fri, 12 Feb 2016 00:00:00 +0000</pubDate>
+        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
+        <guid>https://ghlecl.github.io/posts/staticsite/</guid>
+        <description>
+
+&lt;h1 id=&#34;hugo&#34;&gt;Hugo&lt;/h1&gt;
+
+&lt;p&gt;In a &lt;a href=&#34;https://ghlecl.github.io/posts/githubpages/&#34;&gt;previous&lt;/a&gt; entry, I described how I got to using &lt;a href=&#34;https://pages.github.com/&#34;&gt;GitHub Pages&lt;/a&gt;.  That was one of the (if not the) first question I had to figure out when I decided to write my notes in an Internet format (ok, blog, but I don&amp;rsquo;t see myself as a blogger).  The second thing I had to figure out was what to use as a writing tool.  I could simply write static HTML by hand and leave it at that (actually, if you stumbled upon this website before I posted my first few posts, I left a Hello World page up for a few weeks/months while figuring all this out!).  I am trying to set the bar a little higher than that for myself.&lt;/p&gt;
+
+&lt;p&gt;For work, I have been playing with &lt;a href=&#34;https://www.djangoproject.com&#34;&gt;Django&lt;/a&gt; and at some point, I thought I could write something in Django or use a Django CMS, but since GitHub Pages only serve static content, I had to abandon that plan.  I could have done static HTML with some CSS framework like &lt;a href=&#34;http://getbootstrap.com&#34;&gt;Bootstrap&lt;/a&gt; or &lt;a href=&#34;http://foundation.zurb.com&#34;&gt;Foundation&lt;/a&gt;.  Actually, that is how I started to write all of this, but then, the same friend of mine that pointed me in the direction of GitHub Pages, also reminded me that they suggest a workflow with &lt;a href=&#34;http://jekyllrb.com&#34;&gt;Jekyll&lt;/a&gt;.  Trying to get information about that, I learned that Jekyll is what is called a static site generator and that there are quite a few &lt;a href=&#34;https://www.staticgen.com/&#34;&gt;alternatives&lt;/a&gt; out there.  Looking at a few of the alternatives, I decided to go with &lt;a href=&#34;https://gohugo.io/&#34;&gt;Hugo&lt;/a&gt; (no pun intended), originally written by &lt;a href=&#34;https://github.com/spf13&#34;&gt;Steve Francia&lt;/a&gt;.  I can&amp;rsquo;t claim to have researched the subject extensively, but Hugo seemed like it was configurable enough for my needs/tastes, fast enough and easy enough.&lt;/p&gt;
+
+&lt;p&gt;Basically, the idea of a static site generator is to &amp;ldquo;build&amp;rdquo; a website telling a build system (I like to think of it as a compiler) how to construct each individual page using templates.  Then, all you do is generate new (mostly) unformatted content and ask the generator to rebuild the site.  This will update everything and include the new content.  As it constructs these pages, the build system will make a list of the entries and collect bits and pieces of informations which it will make available to you via a templating language (Hugo being written in &lt;a href=&#34;https://golang.org/&#34;&gt;Go&lt;/a&gt;, it uses Go&amp;rsquo;s templating language).  You will be able to access that information more or less easily depending on the templating language and insert it in your templates.  For instance, to create a page listing all the posts of the site, you could, in the template, loop through the list of posts and add each of them in a &lt;code&gt;&amp;lt;ul&amp;gt;&lt;/code&gt; element.  As another example, you can get the title of the post in the template so that when designing the page, you can style that title as you please.  For instance:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-html&#34;&gt;&amp;lt;h2 style=&amp;quot;bad idea, use CSS !&amp;quot;&amp;gt; $.Page.Title &amp;lt;/h2&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;I am not suggesting it is a good practice to style that way (as mentioned in the example), but it illustrates my point about the variables.  In the templates, you can also include Javascript or any other kind of valid html you want.  You can therefore use a front-end CSS framework like &lt;a href=&#34;http://zurb.com/&#34;&gt;Zurb&lt;/a&gt; Foundation or &lt;a href=&#34;https://twitter.com/&#34;&gt;Twitter&lt;/a&gt; Bootstrap.&lt;/p&gt;
+
+&lt;p&gt;Alright, this is how I got to Hugo.  I will stop here and start a new post on my setup.  The next post will mark my first post that will actually be what I want for this little site: notes for me on how I did things.  It really is necessary.  Since writing the previous post, I have not done anything involving Hugo and already, I can&amp;rsquo;t really remember the organization of all of this.  Hopefully, taking notes will help.&lt;/p&gt;
+</description>
+      </item>
+      
+    
+      
+      <item>
+        <title>GitHub Pages</title>
+        <link>https://ghlecl.github.io/posts/githubpages/</link>
+        <pubDate>Mon, 23 Nov 2015 00:00:00 +0000</pubDate>
+        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
+        <guid>https://ghlecl.github.io/posts/githubpages/</guid>
+        <description>
+
+&lt;h1 id=&#34;github-pages&#34;&gt;GitHub Pages&lt;/h1&gt;
+
+&lt;p&gt;This is one of my first posts.  I have been toying with the idea of this blog for quite some time now.  A flaw of mine: too much searching for the best solution, not enough implementing.  I end up doing things too late.  Anyhow, I digress.&lt;/p&gt;
+
+&lt;p&gt;One of the relevant questions when thinking of writing a blog is of course where to publish and what tool(s) to use.  At some point, I was thinking of hosting on an old computer of mine.  Played with the different servers (compiled &lt;a href=&#34;https://httpd.apache.org&#34;&gt;Apache&lt;/a&gt;, &lt;a href=&#34;https://www.lighttpd.net&#34;&gt;lighttpd&lt;/a&gt; and &lt;a href=&#34;https://www.nginx.com&#34;&gt;Nginx&lt;/a&gt;).  Then, I realized all the time involved in maintaining my own server and changed my mind.  I did not want to deal with the security updates and the log checking (or the program checking the logs&amp;hellip;).  Not that I am naïve enough to think my content is worth hacking, but using my machine on a bot net or whatnot might be.&lt;/p&gt;
+
+&lt;p&gt;After that, I started looking into shared hosting.  That could have worked, I even paid for a few months, but did nothing productive.  Was still learning everything and for some reason (a friend of mine would say control issues, but who knows really !), I did not want to go with &lt;a href=&#34;https://wordpress.com/&#34;&gt;WordPress&lt;/a&gt;, &lt;a href=&#34;https://www.joomla.org/&#34;&gt;Joomla&lt;/a&gt; or another content management system.  That seemed like overkill for my needs and yes, I like to control things on my computer a little too much for my own good and I did not feel I could get control over those behemoths in a reasonable timeframe.  Most of the shared hosting I looked into (probably not exhaustive) seemed pre-configured for the CMS like systems, but not for other things and I found myself again trying to configure Apache on the shared host.&lt;/p&gt;
+
+&lt;p&gt;I gave up for a while.  I was busy with other things; but lately, I have been coming back to the idea of this blog.  Hence my looking into all those things again.  That&amp;rsquo;s when a very good friend of mine suggested I look into &lt;a href=&#34;https://pages.github.com/&#34;&gt;GitHub Pages&lt;/a&gt;.  The idea is very interesting and if someone else is reading this, it means I actually went through with this.  I personally have two basic needs for a server: 1) writing a blog (and maybe a private section as a journal) and 2) hosting private projects on Git.  With GitHub Pages, I can actually easily create the blog and if I pay for a GitHub account, I believe I should be able to do the private journal and the Git hosting as well.  The monthly cost will be roughly the same as a hosted plan and I will have almost zero if not zero administration to do.&lt;/p&gt;
+
+&lt;p&gt;So that&amp;rsquo;s how I came to GitHub pages!  I am sure that since I am a novice at the Internet (well creating content other then on my Facebook account), there are some assumptions I have made that are wrong and my solution might be sub-optimal, but it works for me.&lt;/p&gt;
+
+&lt;p&gt;Now, let&amp;rsquo;s see if I can make a habit of writing.&lt;/p&gt;
+</description>
+      </item>
+      
+    
+  </channel>
+</rss>
