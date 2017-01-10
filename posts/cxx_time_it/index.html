@@ -83,7 +83,7 @@ for idx in range( r ):
 
 <h3 id="trying-it-out-in-c-time-it">Trying it out in C++ : time_it</h3>
 
-<p>The thing is, I don&rsquo;t always do things in Python and I wanted to have a function similar to <code>timeit</code> which would allow me to measure the execution time of a function or piece of code in C++.  It turns out that with C++14 (don&rsquo;t know if C++11 is sufficient, but C++17/C++1z will make it easier I think), it is possible to get close to it.  When I got the idea, I started to think about the <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4169.html">proposed</a> <code>std::invoke</code> function that should (or has?) make it into the next standard.  This function template takes a function, it&rsquo;s arguments and invokes it.  This is pretty close to what I need.  Coupling the facilities of <code>std::chrono</code> with that function could actually get me pretty close to what I want.  Because some compilers do not yet have an implementation of <code>std::invoke</code>, I had to first find one or write one.  I decided to use the implementation found on <a href="http://en.cppreference.com/w/cpp/utility/functional/invoke">cppreference.com</a>.  But let&rsquo;s pretend that std::invoke is availble.  Then, one can write the function template <code>time_it</code><sup>[1]</sup> using <code>std::invoke</code> and <code>std::chrono</code>.  This is the resulting function for those who do not want to read the steps I went through:</p>
+<p>The thing is, I don&rsquo;t always do things in Python and I wanted to have a function similar to <code>timeit</code> which would allow me to measure the execution time of a function or piece of code in C++.  It turns out that with C++14 (don&rsquo;t know if C++11 is sufficient, but C++17/C++1z will make it easier I think), it is possible to get close to it.  When I got the idea, I started to think about the <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4169.html">proposed</a> <code>std::invoke</code> function that should (or has?) make it into the next standard.  This function template takes a function, it&rsquo;s arguments and invokes it.  This is pretty close to what I need.  Coupling the facilities of <code>std::chrono</code> with that function could actually get me pretty close to what I want.  Because some compilers do not yet have an implementation of <code>std::invoke</code>, I had to first find one or write one.  I decided to use the implementation found on <a href="http://en.cppreference.com/w/cpp/utility/functional/invoke">cppreference.com</a>.  But let&rsquo;s pretend that std::invoke is available.  Then, one can write the function template <code>time_it</code><sup>[1]</sup> using <code>std::invoke</code> and <code>std::chrono</code>.  This is the resulting function for those who do not want to read the steps I went through:</p>
 
 <pre><code class="language-cpp">template&lt;
    unsigned int repeat_invoke = 1000,
@@ -223,7 +223,7 @@ exp 4: [ 5.01679, 5.01788, 5.01327, 5.01883, 5.02777, 5.02198, 5.01831, 5.01463 
 exp 5: [ 55, 55, 55 ]
 </code></pre>
 
-<p>which, for the four first cases, is slightly more than 10ms and is what was expected.  The expected value for the experiment labelled 4 is slightly higher than 5ms and for the last lambda, it should be in the nanoseconds range, which it is.  Of course, the constant value is suspicious and probably means the actual value is actually lower, but the <code>time_it</code> overhead and the clock precision is so that nothing below the 55ns value can be measured on my machine.  I have not determined the error bar on the time measurement.  This is a complex subject and much more work would be needed to test for that.  One other thing I have not tried in this example is the timing of a member function, but it should work.</p>
+<p>which, for the four first cases, is slightly more than 10ms and is what was expected.  The expected value for the experiment labeled 4 is slightly higher than 5ms and for the last lambda, it should be in the nanoseconds range, which it is.  Of course, the constant value is suspicious and probably means the actual value is actually lower, but the <code>time_it</code> overhead and the clock precision is so that nothing below the 55ns value can be measured on my machine.  I have not determined the error bar on the time measurement.  This is a complex subject and much more work would be needed to test for that.  One other thing I have not tried in this example is the timing of a member function, but it should work.</p>
 
 <h3 id="what-is-impossible">What is impossible</h3>
 
@@ -235,7 +235,7 @@ exp 5: [ 55, 55, 55 ]
 
 <h3 id="notes">Notes</h3>
 
-<p><sup>[1]</sup> I chose the name with an underscore to differenciate the function from its Python counterpart since my version does not do <em>exactly</em> all the stuff the python version can!</p>
+<p><sup>[1]</sup> I chose the name with an underscore to differentiate the function from its Python counterpart since my version does not do <em>exactly</em> all the stuff the python version can!</p>
 
       </p>
     </article>
@@ -260,7 +260,7 @@ You can follow me on <a href="http://twitter.com/ghlecl">Twitter</a> and on <a h
 
   
     <div class="footer_copyright">
-      &copy; 2016 <a href="https://ghlecl.github.io/about">Ghyslain Leclerc</a>
+      &copy; 2017 <a href="https://ghlecl.github.io/about">Ghyslain Leclerc</a>
        - Made in Quebec, Canada
     </div>
   

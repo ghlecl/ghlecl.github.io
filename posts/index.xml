@@ -8,8 +8,44 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     
-    <lastBuildDate>Sun, 20 Mar 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 05 Jan 2017 00:00:00 +0000</lastBuildDate>
     <atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
+    
+      
+      <item>
+        <title>Using a theme with Hugo</title>
+        <link>https://ghlecl.github.io/posts/hugo_theme/</link>
+        <pubDate>Thu, 05 Jan 2017 00:00:00 +0000</pubDate>
+        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
+        <guid>https://ghlecl.github.io/posts/hugo_theme/</guid>
+        <description>
+
+&lt;h1 id=&#34;hugo-themes&#34;&gt;Hugo themes&lt;/h1&gt;
+
+&lt;p&gt;Initially, I had two objectives for this blog.  One was to have a place where I could write some notes on programming for myself so that I could find them when I needed them.  The other was to learn a bit more about the web.&lt;/p&gt;
+
+&lt;p&gt;I thought (naively, granted) I could write it all myself using a static site generator.  I wanted to write the HTML, the CSS, the JavaScript, everything!  I thought it would not be too difficult using the templating engine of the static site generator and a front end development framework (&lt;a href=&#34;http://foundation.zurb.com/&#34;&gt;Zurb Foundation&lt;/a&gt; was my initial choice).  Turns out I was both right and wrong.&lt;/p&gt;
+
+&lt;p&gt;Using the static site generator and a CSS/front end framework, I was able to get a basic site working with little previous knowledge of CSS and HTML.  My background is actually physics and so web programming is something new to me.  Took me a few nights, but it was up and running in a reasonable amount of time (for me).  Unfortunately, it turns out it was not as easy/quick as I had hoped to set it up, let alone customize the site.  I quickly found myself spending more and more time on the &amp;ldquo;mechanics&amp;rdquo; of the site and barely any time at all writing my programming notes.&lt;/p&gt;
+
+&lt;p&gt;As I said, I was both right and wrong: you can make a site form scratch without too much difficulty using the static site generator and a web framework, but it still takes a fair amount of time, time which I found out I was not willing to spend.  So I set out to explore &lt;a href=&#34;https://gohugo.io/&#34;&gt;Hugo&amp;rsquo;s&lt;/a&gt; theming mechanism and the &lt;a href=&#34;http://themes.gohugo.io/&#34;&gt;available themes&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;I considered quite a few of them.  I was looking for something simple and did not have that many requirements (I think).  I really wanted to have pagination and, if possible, search and &lt;a href=&#34;https://disqus.com/&#34;&gt;Disqus&lt;/a&gt; integration (the latter two I ended up dropping).  I also did not want too many fonts and too many moving parts.  Ideally, it would not be too hard to customize the site/theme.  Analytics do not really interest me.  All and all, nothing too fancy.&lt;/p&gt;
+
+&lt;p&gt;At some point, I was interested in Google&amp;rsquo;s &lt;a href=&#34;https://material.io/&#34;&gt;Material Design&lt;/a&gt; and so thought a theme using it might be nice.  Unfortunately, I could not find a material design based theme that was simple enough for me to customize (of course, others might disagree on that!).  Then I thought something using &lt;a href=&#34;http://webcomponents.org/&#34;&gt;Web Components&lt;/a&gt; might be interesting so I looked into a theme using &lt;a href=&#34;https://www.polymer-project.org/1.0/&#34;&gt;Polymer&lt;/a&gt;.  Again, nothing easy enough to customize for my skill level.  I think that is the point: anything interesting or new will take me too much time to work on and take me away from writing, which for me is the point of all this.&lt;/p&gt;
+
+&lt;p&gt;So in the end, I chose a theme that is out of the box really pleasing to me: &lt;a href=&#34;http://themes.gohugo.io/internet-weblog/&#34;&gt;Internet Weblog&lt;/a&gt; by &lt;a href=&#34;http://jnjosh.com/&#34;&gt;Josh Johnson&lt;/a&gt;.  Really nice theme which is, at least up till now, easy enough to customize to my needs.  The only thing I have had trouble with is the fact that the theme was written for an older Hugo version and some template syntax (mainly capitalization of variable names) was not portable to the current version (0.18 when writing this).  I was able to fairly quickly make the necessary changes to the theme and allow it to run on the version of Hugo I am using.&lt;/p&gt;
+
+&lt;p&gt;In the future, I might look into creating a search box for the site.  Currently, this blog does not hold that many posts, but the theme comes with the idea/concept of microposts which I really like.  Microposts actually serve my purpose of programming notes even better than full posts, I think.  Often, I solve a small problem in a particular way and I would like to remember my solution without writing a full blog post about it (usually because it does not warrant that).  Writing a small 1-2 paragraph micropost to remember the solution would be perfect.  The problem is if too many of those pile up, then you can&amp;rsquo;t find them easily anymore.  So a search box for the site would be nice.  At least that&amp;rsquo;s what I think right now.&lt;/p&gt;
+
+&lt;p&gt;As for Disqus integration, I thought it might be interesting to discuss (no pun intended) the more technical posts I write here with people, but it&amp;rsquo;s really a low priority.  I usually take things to heart a little too much and the internet is the best place to be told you are dumb in a very &amp;ldquo;nonconstructive&amp;rdquo; manner.  Those two probably don&amp;rsquo;t mix well and so not opening my posts for comments might be a better idea for me.  Who knows what the future holds.&lt;/p&gt;
+
+&lt;p&gt;This means that the information about my &lt;a href=&#34;https://ghlecl.github.io/posts/hugo/&#34;&gt;initial Hugo setup&lt;/a&gt; is already out of date and invalid.  I might try and write a post (micropost?) about the new setup in the near future, but basically, I mostly use default values and a theme.&lt;/p&gt;
+
+&lt;p&gt;So now that I have a theme that I like for the site, I can start posting a bit more often (hopefully).&lt;/p&gt;
+</description>
+      </item>
+      
     
       
       <item>
@@ -44,7 +80,7 @@ for idx in range( r ):
 
 &lt;h3 id=&#34;trying-it-out-in-c-time-it&#34;&gt;Trying it out in C++ : time_it&lt;/h3&gt;
 
-&lt;p&gt;The thing is, I don&amp;rsquo;t always do things in Python and I wanted to have a function similar to &lt;code&gt;timeit&lt;/code&gt; which would allow me to measure the execution time of a function or piece of code in C++.  It turns out that with C++14 (don&amp;rsquo;t know if C++11 is sufficient, but C++17/C++1z will make it easier I think), it is possible to get close to it.  When I got the idea, I started to think about the &lt;a href=&#34;http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4169.html&#34;&gt;proposed&lt;/a&gt; &lt;code&gt;std::invoke&lt;/code&gt; function that should (or has?) make it into the next standard.  This function template takes a function, it&amp;rsquo;s arguments and invokes it.  This is pretty close to what I need.  Coupling the facilities of &lt;code&gt;std::chrono&lt;/code&gt; with that function could actually get me pretty close to what I want.  Because some compilers do not yet have an implementation of &lt;code&gt;std::invoke&lt;/code&gt;, I had to first find one or write one.  I decided to use the implementation found on &lt;a href=&#34;http://en.cppreference.com/w/cpp/utility/functional/invoke&#34;&gt;cppreference.com&lt;/a&gt;.  But let&amp;rsquo;s pretend that std::invoke is availble.  Then, one can write the function template &lt;code&gt;time_it&lt;/code&gt;&lt;sup&gt;[1]&lt;/sup&gt; using &lt;code&gt;std::invoke&lt;/code&gt; and &lt;code&gt;std::chrono&lt;/code&gt;.  This is the resulting function for those who do not want to read the steps I went through:&lt;/p&gt;
+&lt;p&gt;The thing is, I don&amp;rsquo;t always do things in Python and I wanted to have a function similar to &lt;code&gt;timeit&lt;/code&gt; which would allow me to measure the execution time of a function or piece of code in C++.  It turns out that with C++14 (don&amp;rsquo;t know if C++11 is sufficient, but C++17/C++1z will make it easier I think), it is possible to get close to it.  When I got the idea, I started to think about the &lt;a href=&#34;http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4169.html&#34;&gt;proposed&lt;/a&gt; &lt;code&gt;std::invoke&lt;/code&gt; function that should (or has?) make it into the next standard.  This function template takes a function, it&amp;rsquo;s arguments and invokes it.  This is pretty close to what I need.  Coupling the facilities of &lt;code&gt;std::chrono&lt;/code&gt; with that function could actually get me pretty close to what I want.  Because some compilers do not yet have an implementation of &lt;code&gt;std::invoke&lt;/code&gt;, I had to first find one or write one.  I decided to use the implementation found on &lt;a href=&#34;http://en.cppreference.com/w/cpp/utility/functional/invoke&#34;&gt;cppreference.com&lt;/a&gt;.  But let&amp;rsquo;s pretend that std::invoke is available.  Then, one can write the function template &lt;code&gt;time_it&lt;/code&gt;&lt;sup&gt;[1]&lt;/sup&gt; using &lt;code&gt;std::invoke&lt;/code&gt; and &lt;code&gt;std::chrono&lt;/code&gt;.  This is the resulting function for those who do not want to read the steps I went through:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;template&amp;lt;
    unsigned int repeat_invoke = 1000,
@@ -184,7 +220,7 @@ exp 4: [ 5.01679, 5.01788, 5.01327, 5.01883, 5.02777, 5.02198, 5.01831, 5.01463 
 exp 5: [ 55, 55, 55 ]
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;which, for the four first cases, is slightly more than 10ms and is what was expected.  The expected value for the experiment labelled 4 is slightly higher than 5ms and for the last lambda, it should be in the nanoseconds range, which it is.  Of course, the constant value is suspicious and probably means the actual value is actually lower, but the &lt;code&gt;time_it&lt;/code&gt; overhead and the clock precision is so that nothing below the 55ns value can be measured on my machine.  I have not determined the error bar on the time measurement.  This is a complex subject and much more work would be needed to test for that.  One other thing I have not tried in this example is the timing of a member function, but it should work.&lt;/p&gt;
+&lt;p&gt;which, for the four first cases, is slightly more than 10ms and is what was expected.  The expected value for the experiment labeled 4 is slightly higher than 5ms and for the last lambda, it should be in the nanoseconds range, which it is.  Of course, the constant value is suspicious and probably means the actual value is actually lower, but the &lt;code&gt;time_it&lt;/code&gt; overhead and the clock precision is so that nothing below the 55ns value can be measured on my machine.  I have not determined the error bar on the time measurement.  This is a complex subject and much more work would be needed to test for that.  One other thing I have not tried in this example is the timing of a member function, but it should work.&lt;/p&gt;
 
 &lt;h3 id=&#34;what-is-impossible&#34;&gt;What is impossible&lt;/h3&gt;
 
@@ -196,7 +232,7 @@ exp 5: [ 55, 55, 55 ]
 
 &lt;h3 id=&#34;notes&#34;&gt;Notes&lt;/h3&gt;
 
-&lt;p&gt;&lt;sup&gt;[1]&lt;/sup&gt; I chose the name with an underscore to differenciate the function from its Python counterpart since my version does not do &lt;em&gt;exactly&lt;/em&gt; all the stuff the python version can!&lt;/p&gt;
+&lt;p&gt;&lt;sup&gt;[1]&lt;/sup&gt; I chose the name with an underscore to differentiate the function from its Python counterpart since my version does not do &lt;em&gt;exactly&lt;/em&gt; all the stuff the python version can!&lt;/p&gt;
 </description>
       </item>
       
@@ -216,7 +252,7 @@ exp 5: [ 55, 55, 55 ]
 
 &lt;h3 id=&#34;static-site-generation-via-hugo&#34;&gt;Static site generation via Hugo&lt;/h3&gt;
 
-&lt;p&gt;Basically, in Hugo (as in many &lt;a href=&#34;https://www.staticgen.com/&#34;&gt;static site generators&lt;/a&gt;), the idea is to write content in files with a given format (often &lt;a href=&#34;https://daringfireball.net/projects/markdown/&#34;&gt;markdown&lt;/a&gt;) and specify how to build a website out of this content via template/layout files.  Once you run the executable (literally &lt;code&gt;hugo&lt;/code&gt;) on the directory structure containing all those content and layout files, a static website is generated.  To mark a file as a content file, you put a YAML or TOML header at the beggining of the file.  Some information in the header is required by Hugo, some is optional and some is custom.&lt;/p&gt;
+&lt;p&gt;Basically, in Hugo (as in many &lt;a href=&#34;https://www.staticgen.com/&#34;&gt;static site generators&lt;/a&gt;), the idea is to write content in files with a given format (often &lt;a href=&#34;https://daringfireball.net/projects/markdown/&#34;&gt;markdown&lt;/a&gt;) and specify how to build a website out of this content via template/layout files.  Once you run the executable (literally &lt;code&gt;hugo&lt;/code&gt;) on the directory structure containing all those content and layout files, a static website is generated.  To mark a file as a content file, you put a YAML or TOML header at the beginning of the file.  Some information in the header is required by Hugo, some is optional and some is custom.&lt;/p&gt;
 
 &lt;h3 id=&#34;the-setup&#34;&gt;The setup&lt;/h3&gt;
 
@@ -295,7 +331,7 @@ exp 5: [ 55, 55, 55 ]
       <item>
         <title>Static Site</title>
         <link>https://ghlecl.github.io/posts/staticsite/</link>
-        <pubDate>Fri, 12 Feb 2016 00:00:00 +0000</pubDate>
+        <pubDate>Tue, 29 Dec 2015 00:00:00 +0000</pubDate>
         <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
         <guid>https://ghlecl.github.io/posts/staticsite/</guid>
         <description>
@@ -311,7 +347,7 @@ exp 5: [ 55, 55, 55 ]
 &lt;pre&gt;&lt;code class=&#34;language-html&#34;&gt;&amp;lt;h2 style=&amp;quot;bad idea, use CSS !&amp;quot;&amp;gt; $.Page.Title &amp;lt;/h2&amp;gt;
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;I am not suggesting it is a good practice to style that way (as mentioned in the example), but it illustrates my point about the variables.  In the templates, you can also include Javascript or any other kind of valid html you want.  You can therefore use a front-end CSS framework like &lt;a href=&#34;http://zurb.com/&#34;&gt;Zurb&lt;/a&gt; Foundation or &lt;a href=&#34;https://twitter.com/&#34;&gt;Twitter&lt;/a&gt; Bootstrap.&lt;/p&gt;
+&lt;p&gt;I am not suggesting it is a good practice to style that way (as mentioned in the example), but it illustrates my point about the variables.  In the templates, you can also include JavaScript or any other kind of valid HTML you want.  You can therefore use a front-end CSS framework like &lt;a href=&#34;http://zurb.com/&#34;&gt;Zurb&lt;/a&gt; Foundation or &lt;a href=&#34;https://twitter.com/&#34;&gt;Twitter&lt;/a&gt; Bootstrap.&lt;/p&gt;
 
 &lt;p&gt;Alright, this is how I got to Hugo.  I will stop here and start a new post on my setup.  The next post will mark my first post that will actually be what I want for this little site: notes for me on how I did things.  It really is necessary.  Since writing the previous post, I have not done anything involving Hugo and already, I can&amp;rsquo;t really remember the organization of all of this.  Hopefully, taking notes will help.&lt;/p&gt;
 </description>
