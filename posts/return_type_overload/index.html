@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Ghyslain Leclerc">
+    <meta name="description" content="Personnal notes on code.">
+    <meta name="generator" content="Hugo 0.29" />
+
+    
+    <title>Return type overloading &middot; @ghlecl’s Code Attempts</title>
+
+    <link rel="stylesheet" href="https://ghlecl.github.io/css/weblog.css" media="screen" charset="utf-8" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/1.2.14/css/lightgallery.min.css" type="text/css" />
+    
+
+
+    
+	<link href="https://ghlecl.github.io/index.xml" rel="alternate" type="application/rss+xml" title="Code Attempts" />
+	
+  </head>
+  <body class="site">
+
+<header>
+  <nav>
+    <h1><a href="https://ghlecl.github.io/">@ghlecl</a>’s Code Attempts.</h1>
+    <div class="menu">
+      
+      <ul>
+        
+            <li>
+              <a href="https://ghlecl.github.io/posts/">Posts</a>
+              
+                <a href="https://ghlecl.github.io/posts/index.xml"><img src="https://ghlecl.github.io/img/rss.svg" class="rss-icon" /></a>
+              
+            </li>
+        
+        <li><a href="https://ghlecl.github.io/about">About</a></li>
+      </ul>
+    </div>
+  </nav>
+</header>
+
+
+  <main class="content">
+
+    <article class="post">
+      
+        <h2><a rel="full-article" href="https://ghlecl.github.io/posts/return_type_overload/">Return type overloading</a></h2>
+      
+
+      <div class="postmeta">Posted on <time datetime="2017-10-12 00:00:00 &#43;0000 UTC" pubdate="">October 12, 2017</time> in
+        <span class="categories">
+          
+        </span>
+      </div>
+
+      <p>
+        
+
+<h1 id="no-return-type-overloading">No return type overloading</h1>
+
+<p>In C++, return type does not participate in function overload resolution, i.e. it is not possible to overload a function on the return type.  Thus, this is not legal C++:</p>
+
+<pre><code class="language-c++">void to_lower( std::string&amp; strg );
+std::string to_lower( std::string&amp; strg );
+</code></pre>
+
+<p>The compiler will issue an error when it sees the second declaration.<sup>[1]</sup>  For instance, the error Clang emits is the following: &ldquo;error: functions that differ only in their return type cannot be overloaded&rdquo;.  The detailed reasons for this rule are irrelevant in the current discussion: it is just a fact.  I believe it is partially due to C++ allowing you to ignore the return value of a function if you so choose.  Thus, even for a function returning an int, you can call it without using or even capturing the return value:</p>
+
+<pre><code class="language-C++">int fn( int );
+
+auto ret_val = fn( 5 );
+fn( 12 ); // legal call, simply drops the return value
+</code></pre>
+
+<p>In the example, if <code>fn</code> were overloaded on return type only, how would the second call be disambiguated?  I am far from certain this is the only reason why, but it is convincing enough for me.</p>
+
+<p>Still, I really wanted to be able to have an &ldquo;in place&rdquo; and &ldquo;not in place&rdquo; version of the <code>to_lower</code> function I wrote.  And, <a href="https://twitter.com/secretGeek/status/7269997868" target="_blank">naming things is hard</a>, so I did not want to have to change the name of the function.  Cheating a little bit, I have found a way to <em>simulate</em> function overloading on return type or at least make it possible to have the same name for the two functions and (almost) only a differing return type.</p>
+
+<p>With what I came up with, one of the two overloads becomes a template and must be called explicitly, so no ADL or overload resolution alone can help me and template argument deduction cannot be used either because the function parameter(s) do not depend on the template parameter.  After all, it is illegal to overload on return type in C++ and my technique does not imply changing the ISO C++ standard!</p>
+
+<h3 id="how-i-cheated">How I <em>cheated</em></h3>
+
+<p>All I did is use a template parameter as a tag for one version of the function.  I created an empty struct as a tag and templated one of the versions (the one the tag corresponds to).  Then, when I want that version to be called, I explicitly select the templated version passing the tag as an explicitly specified template argument.  Here is a code sample to illustrate/explain better:</p>
+
+<pre><code class="language-C++">#include &lt;type_traits&gt;
+#include &lt;string&gt;
+#include &lt;cstdio&gt;
+namespace ns
+{
+struct in_place {};
+
+template&lt; typename Tag &gt;
+void to_lower( std::string&amp; strg )
+{
+   static_assert( std::is_same&lt; Tag, in_place &gt;::value,
+                     &quot;only in_place is allowed as the template parameter&quot; );
+   //... implementation here ...
+}
+
+std::string to_lower( std::string&amp; strg )
+{
+   //... implementation here ...
+   return strg;
+}
+
+} // namespace ns
+
+int main( int argc, char* argv[] )
+{
+   using ns::in_place;
+   using ns::to_lower;
+
+   std::string to_change( &quot;This STring is Mixed CASe.&quot; );
+
+   auto new_strg = to_lower( to_change );
+   to_lower&lt; in_place &gt;( to_change );
+
+   printf( &quot;%s\n&quot;, ( to_change == new_strg ? &quot;true&quot; : &quot;false&quot; ) );
+   return 0;
+}
+</code></pre>
+
+<p>Users of the function are provided with the tag and can use it to call the &ldquo;overload&rdquo; (so to speak, not an actual overload, I know).  Compilers are actually pretty good at eliminating empty classes from the code, even at not too high optimization levels.  So I am confident that the tag should disappear completely from the resulting binary and there should be no runtime downside to this technique.<sup>[2]</sup>  Also, if appropriate, one function can be implemented using the other.  To ensure that types other than the provided tag can&rsquo;t be used for the function call, I put a <code>static_assert</code> in the implementation.  Otherwise, any type could be put in there (as in <code>to_lower&lt;int&gt;</code>), which although it would work, would not be as explicit and as clear.  I don&rsquo;t know why anyone would want do that, but I forbid it explicitly in my implementation.</p>
+
+<p>What I did is no revolution and nothing fancy, but it does allow me to get the interface I need from my function, namely two functions with the same name differing only in return types&hellip; or almost.  I also find it to be expressive: it is clear at the call site that I will be modifying the string that is passed in.  Some might like it, others won&rsquo;t!  If you find it useful, good.</p>
+
+<h3 id="alternative">Alternative</h3>
+
+<p>A friend suggested that another possible implementation would be to use variadic templates and call the function with an empty diamond.  I tried that version and it is possible.  I even put in a <code>static_assert</code> to check that the function can&rsquo;t be called with a non empty parameter pack.  That being said, I find that it is better to have the empty struct as a tag because it is a bit more explicit which overload actually acts in place (whereas in the empty parameter pack alternative, it is clear which overload is called (the template), but not whether this is the one working in place).  I suspect either implementation would result in the same binary code.  To me, another argument in favor of keeping the tag is that <a href="https://arne-mertz.de/2016/tag-dispatch/" target="_blank">tag dispatching</a> (which my technique is similar to) is familiar to many C++ programmers while seeing a call with the empty diamond is not so common (I think, I might be completely wrong).</p>
+
+<h3 id="notes">Notes</h3>
+
+<p><sup>[1]</sup> I know that the second overload, the one returning a new string, could take it&rsquo;s parameter by reference or by value (since I&rsquo;m probably doing a copy in the implementation anyhow).  That would have complicated the explanation of the overloads (as in that case, both functions would not technically be exactly differing only in return type), so I chose to write my examples that way in the post.</p>
+
+<p><sup>[2]</sup> I would have &ldquo;Godbolted&rdquo; my code, but I am not that good at reading assembler and when I tried with the std::string, the resulting assembler contains much more than my function and is not that simple to analyse.  I did it with ints, but then, starting at -O2, main becomes almost empty as the compiler can see all the constants and simplify all the way.</p>
+
+      </p>
+    </article>
+
+
+  </main>
+
+<footer>
+  <div class="footer_text">
+      <div>
+        <h3>Hi, <a href="https://ghlecl.github.io/about">I'm Ghyslain</a></h3>
+        <p>
+          I am a medical physicist by day and a hobby programmer by night.
+
+
+You can follow me on <a href="http://twitter.com/ghlecl" target="_blank">Twitter</a> and on <a href="http://github.com/ghlecl" target="_blank">GitHub</a>.  You can reach me via codeattempts [at] gmail [dot] com.
+
+        </p>
+      </div>
+      
+  </div>
+
+  
+    <div class="footer_copyright">
+      &copy; 2017 <a href="https://ghlecl.github.io/about">Ghyslain Leclerc</a>
+       - Made in Quebec, Canada
+    </div>
+  
+</footer>
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/2.2.0/jquery.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/1.2.14/js/lightgallery-all.min.js" charset="utf-8"></script>
+    <script src="https://ghlecl.github.io/js/weblog.js" charset="utf-8"></script>
+    
+
+    <script type="text/javascript">
+
+  
+  $(function() {
+    
+    $.getJSON("https://api.flickr.com/services/feeds/photos_public.gne?id=&format=json&jsoncallback=?", function(data) {
+      iweblog.application.displayImages(data, 8);
+    });
+  });
+
+</script>
+
+    
+  </body>
+</html>
+

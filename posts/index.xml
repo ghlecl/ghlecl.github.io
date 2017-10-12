@@ -3,13 +3,103 @@
   <channel>
 
     <title>@ghlecl’s Code Attempts - Posts</title>
-    <link>https://ghlecl.github.io/posts/index.xml</link>
+    <link>https://ghlecl.github.io/posts/</link>
     <description>All entries in Posts on Code Attempts</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     
-    <lastBuildDate>Tue, 10 Jan 2017 00:00:00 +0000</lastBuildDate>
-    <atom:link href="/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 12 Oct 2017 00:00:00 +0000</lastBuildDate>
+    <atom:link href="/posts/" rel="self" type="application/rss+xml" />
+    
+      
+      <item>
+        <title>Return type overloading</title>
+        <link>https://ghlecl.github.io/posts/return_type_overload/</link>
+        <pubDate>Thu, 12 Oct 2017 00:00:00 +0000</pubDate>
+        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
+        <guid>https://ghlecl.github.io/posts/return_type_overload/</guid>
+        <description>
+
+&lt;h1 id=&#34;no-return-type-overloading&#34;&gt;No return type overloading&lt;/h1&gt;
+
+&lt;p&gt;In C++, return type does not participate in function overload resolution, i.e. it is not possible to overload a function on the return type.  Thus, this is not legal C++:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;void to_lower( std::string&amp;amp; strg );
+std::string to_lower( std::string&amp;amp; strg );
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The compiler will issue an error when it sees the second declaration.&lt;sup&gt;[1]&lt;/sup&gt;  For instance, the error Clang emits is the following: &amp;ldquo;error: functions that differ only in their return type cannot be overloaded&amp;rdquo;.  The detailed reasons for this rule are irrelevant in the current discussion: it is just a fact.  I believe it is partially due to C++ allowing you to ignore the return value of a function if you so choose.  Thus, even for a function returning an int, you can call it without using or even capturing the return value:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C++&#34;&gt;int fn( int );
+
+auto ret_val = fn( 5 );
+fn( 12 ); // legal call, simply drops the return value
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;In the example, if &lt;code&gt;fn&lt;/code&gt; were overloaded on return type only, how would the second call be disambiguated?  I am far from certain this is the only reason why, but it is convincing enough for me.&lt;/p&gt;
+
+&lt;p&gt;Still, I really wanted to be able to have an &amp;ldquo;in place&amp;rdquo; and &amp;ldquo;not in place&amp;rdquo; version of the &lt;code&gt;to_lower&lt;/code&gt; function I wrote.  And, &lt;a href=&#34;https://twitter.com/secretGeek/status/7269997868&#34; target=&#34;_blank&#34;&gt;naming things is hard&lt;/a&gt;, so I did not want to have to change the name of the function.  Cheating a little bit, I have found a way to &lt;em&gt;simulate&lt;/em&gt; function overloading on return type or at least make it possible to have the same name for the two functions and (almost) only a differing return type.&lt;/p&gt;
+
+&lt;p&gt;With what I came up with, one of the two overloads becomes a template and must be called explicitly, so no ADL or overload resolution alone can help me and template argument deduction cannot be used either because the function parameter(s) do not depend on the template parameter.  After all, it is illegal to overload on return type in C++ and my technique does not imply changing the ISO C++ standard!&lt;/p&gt;
+
+&lt;h3 id=&#34;how-i-cheated&#34;&gt;How I &lt;em&gt;cheated&lt;/em&gt;&lt;/h3&gt;
+
+&lt;p&gt;All I did is use a template parameter as a tag for one version of the function.  I created an empty struct as a tag and templated one of the versions (the one the tag corresponds to).  Then, when I want that version to be called, I explicitly select the templated version passing the tag as an explicitly specified template argument.  Here is a code sample to illustrate/explain better:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-C++&#34;&gt;#include &amp;lt;type_traits&amp;gt;
+#include &amp;lt;string&amp;gt;
+#include &amp;lt;cstdio&amp;gt;
+namespace ns
+{
+struct in_place {};
+
+template&amp;lt; typename Tag &amp;gt;
+void to_lower( std::string&amp;amp; strg )
+{
+   static_assert( std::is_same&amp;lt; Tag, in_place &amp;gt;::value,
+                     &amp;quot;only in_place is allowed as the template parameter&amp;quot; );
+   //... implementation here ...
+}
+
+std::string to_lower( std::string&amp;amp; strg )
+{
+   //... implementation here ...
+   return strg;
+}
+
+} // namespace ns
+
+int main( int argc, char* argv[] )
+{
+   using ns::in_place;
+   using ns::to_lower;
+
+   std::string to_change( &amp;quot;This STring is Mixed CASe.&amp;quot; );
+
+   auto new_strg = to_lower( to_change );
+   to_lower&amp;lt; in_place &amp;gt;( to_change );
+
+   printf( &amp;quot;%s\n&amp;quot;, ( to_change == new_strg ? &amp;quot;true&amp;quot; : &amp;quot;false&amp;quot; ) );
+   return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Users of the function are provided with the tag and can use it to call the &amp;ldquo;overload&amp;rdquo; (so to speak, not an actual overload, I know).  Compilers are actually pretty good at eliminating empty classes from the code, even at not too high optimization levels.  So I am confident that the tag should disappear completely from the resulting binary and there should be no runtime downside to this technique.&lt;sup&gt;[2]&lt;/sup&gt;  Also, if appropriate, one function can be implemented using the other.  To ensure that types other than the provided tag can&amp;rsquo;t be used for the function call, I put a &lt;code&gt;static_assert&lt;/code&gt; in the implementation.  Otherwise, any type could be put in there (as in &lt;code&gt;to_lower&amp;lt;int&amp;gt;&lt;/code&gt;), which although it would work, would not be as explicit and as clear.  I don&amp;rsquo;t know why anyone would want do that, but I forbid it explicitly in my implementation.&lt;/p&gt;
+
+&lt;p&gt;What I did is no revolution and nothing fancy, but it does allow me to get the interface I need from my function, namely two functions with the same name differing only in return types&amp;hellip; or almost.  I also find it to be expressive: it is clear at the call site that I will be modifying the string that is passed in.  Some might like it, others won&amp;rsquo;t!  If you find it useful, good.&lt;/p&gt;
+
+&lt;h3 id=&#34;alternative&#34;&gt;Alternative&lt;/h3&gt;
+
+&lt;p&gt;A friend suggested that another possible implementation would be to use variadic templates and call the function with an empty diamond.  I tried that version and it is possible.  I even put in a &lt;code&gt;static_assert&lt;/code&gt; to check that the function can&amp;rsquo;t be called with a non empty parameter pack.  That being said, I find that it is better to have the empty struct as a tag because it is a bit more explicit which overload actually acts in place (whereas in the empty parameter pack alternative, it is clear which overload is called (the template), but not whether this is the one working in place).  I suspect either implementation would result in the same binary code.  To me, another argument in favor of keeping the tag is that &lt;a href=&#34;https://arne-mertz.de/2016/tag-dispatch/&#34; target=&#34;_blank&#34;&gt;tag dispatching&lt;/a&gt; (which my technique is similar to) is familiar to many C++ programmers while seeing a call with the empty diamond is not so common (I think, I might be completely wrong).&lt;/p&gt;
+
+&lt;h3 id=&#34;notes&#34;&gt;Notes&lt;/h3&gt;
+
+&lt;p&gt;&lt;sup&gt;[1]&lt;/sup&gt; I know that the second overload, the one returning a new string, could take it&amp;rsquo;s parameter by reference or by value (since I&amp;rsquo;m probably doing a copy in the implementation anyhow).  That would have complicated the explanation of the overloads (as in that case, both functions would not technically be exactly differing only in return type), so I chose to write my examples that way in the post.&lt;/p&gt;
+
+&lt;p&gt;&lt;sup&gt;[2]&lt;/sup&gt; I would have &amp;ldquo;Godbolted&amp;rdquo; my code, but I am not that good at reading assembler and when I tried with the std::string, the resulting assembler contains much more than my function and is not that simple to analyse.  I did it with ints, but then, starting at -O2, main becomes almost empty as the compiler can see all the constants and simplify all the way.&lt;/p&gt;
+</description>
+      </item>
+      
     
       
       <item>
