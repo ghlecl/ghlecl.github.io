@@ -9,7 +9,7 @@
     <meta name="generator" content="Hugo 0.31" />
 
     
-    <title>Posts &middot; @ghlecl’s Code Attempts</title>
+    <title>Count chars in lines &middot; @ghlecl’s Code Attempts</title>
 
     <link rel="stylesheet" href="https://ghlecl.github.io/css/weblog.css" media="screen" charset="utf-8" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/1.2.14/css/lightgallery.min.css" type="text/css" />
@@ -50,84 +50,25 @@
 </header>
 
 
-<main class="content">
-  <article class="post-groups">
-    <div class="post-group">
-    
-      <div class="post-group-item">
-        <h3>2017</h3>
-        <ul>
-          
-            <li>
-              
-                <a rel="full-article" href="https://ghlecl.github.io/posts/return_type_overload/">Return type overloading</a>
-                on <time datetime="2017-10-12 00:00:00 &#43;0000 UTC" pubdate="">October 12</time>
-              
-            </li>
-          
-            <li>
-              
-                <a rel="full-article" href="https://ghlecl.github.io/posts/learning_rvalues/">rvalue references in C&#43;&#43;</a>
-                on <time datetime="2017-01-10 00:00:00 &#43;0000 UTC" pubdate="">January 10</time>
-              
-            </li>
-          
-            <li>
-              
-                <a rel="full-article" href="https://ghlecl.github.io/posts/hugo_theme/">Using a theme with Hugo</a>
-                on <time datetime="2017-01-05 00:00:00 &#43;0000 UTC" pubdate="">January 5</time>
-              
-            </li>
-          
-        </ul>
-      </div>
-    
-      <div class="post-group-item">
-        <h3>2016</h3>
-        <ul>
-          
-            <li>
-              
-                <a rel="full-article" href="https://ghlecl.github.io/posts/cxx_time_it/">Timing pieces of code</a>
-                on <time datetime="2016-03-20 00:00:00 &#43;0000 UTC" pubdate="">March 20</time>
-              
-            </li>
-          
-            <li>
-              
-                <a rel="full-article" href="https://ghlecl.github.io/posts/hugo/">My Hugo Setup</a>
-                on <time datetime="2016-02-14 00:00:00 &#43;0000 UTC" pubdate="">February 14</time>
-              
-            </li>
-          
-        </ul>
-      </div>
-    
-      <div class="post-group-item">
-        <h3>2015</h3>
-        <ul>
-          
-            <li>
-              
-                <a rel="full-article" href="https://ghlecl.github.io/posts/staticsite/">Static Site</a>
-                on <time datetime="2015-12-29 00:00:00 &#43;0000 UTC" pubdate="">December 29</time>
-              
-            </li>
-          
-            <li>
-              
-                <a rel="full-article" href="https://ghlecl.github.io/posts/githubpages/">GitHub Pages</a>
-                on <time datetime="2015-11-23 00:00:00 &#43;0000 UTC" pubdate="">November 23</time>
-              
-            </li>
-          
-        </ul>
-      </div>
-    
-    </div>
-  </article>
-</main>
+  <main class="content">
+    <article class="micropost">
+  
 
+<h1 id="counting-chars-in-first-n-lines">Counting chars in first n lines</h1>
+
+<p>I was coding in one of my projects and wanted to make sure that the position I was finding in a file was correct.  In a first attempt, I tried copy-pasting the content of the file up to the position I was searching for into Microsoft Excel&trade; to find the length of the resulting string.  Turns out a naive copy-paste does not preserve whitespace.</p>
+
+<p>I then thought of writing a small application to do what I wanted : open a file, read the <code>n</code> first lines and find the total number of characters (bad reflex, I know).  In trying to figure out the command line interface for this, I realized first that it would be a lot of work for something that I might not use often and second, that there might be an easier way on a *Nix system.</p>
+
+<p>This lead me to simply using the applications <a href="http://man7.org/linux/man-pages/man1/head.1.html" target="_blank">head</a> and <a href="http://man7.org/linux/man-pages/man1/wc.1.html" target="_blank">wc</a> as follows:</p>
+
+<pre><code class="language-bash">head -n &lt;line_count&gt; | wc -m
+</code></pre>
+
+  <a href='https://ghlecl.github.io/microposts/count_chars_in_n_first_lines/'><aside class="dates">→ 2017/11/22 12:30 PM</aside></a>
+</article>
+
+  </main>
 
 <footer>
   <div class="footer_text">
