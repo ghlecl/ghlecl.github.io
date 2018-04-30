@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-
-    <title>@ghlecl’s Code Attempts - Categories</title>
+    <title>Categories on Code Attempts</title>
     <link>https://ghlecl.github.io/categories/</link>
-    <description>All entries in Categories on Code Attempts</description>
+    <description>Recent content in Categories on Code Attempts</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
+    <managingEditor>codeattempts@gmail.com</managingEditor>
+    <webMaster>codeattempts@gmail.com</webMaster>
     
+	<atom:link href="https://ghlecl.github.io/categories/index.xml" rel="self" type="application/rss+xml" />
     
-    <atom:link href="/categories/" rel="self" type="application/rss+xml" />
     
   </channel>
 </rss>

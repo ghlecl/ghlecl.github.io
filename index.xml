@@ -1,22 +1,301 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-
     <title>@ghlecl’s Code Attempts - Code Attempts</title>
-    <link>https://ghlecl.github.io/</link>
+    <link>https://ghlecl.github.io/https://ghlecl.github.io/</link>
     <description>All entries in Code Attempts on Code Attempts</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     
-    <lastBuildDate>Tue, 28 Nov 2017 13:30:00 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 30 Apr 2018 00:00:00 +0000</lastBuildDate>
     <atom:link href="/" rel="self" type="application/rss+xml" />
+    
+      
+      <item>
+        <title>Integer binary representations</title>
+        <link>https://ghlecl.github.io/posts/integer_representations/</link>
+        <pubDate>Mon, 30 Apr 2018 00:00:00 +0000</pubDate>
+        <author>codeattempts@gmail.com - Ghyslain Leclerc</author>
+        <guid>https://ghlecl.github.io/posts/integer_representations/</guid>
+        <description>
+
+&lt;h1 id=&#34;integer-binary-representations&#34;&gt;Integer binary representations&lt;/h1&gt;
+
+&lt;p&gt;I had never had to look closely at integer binary representations in computers.
+The mental model I had for them was not wrong, but it turns out it was sub-optimal
+and there are better ways to do things.  If you use high level abstractions and
+do not mainly work with fundamental types, or if you do not convert between integer
+types, you do not have to be mindful of the binary representation of integers
+all the time as you program.  Thus, before the last few weeks, I never had to look
+more closely at that, but I have started a project for which binary representation
+had a direct effect and I finally looked into them.  I thought I would write down
+some notes and observations.&lt;/p&gt;
+
+&lt;p&gt;I am pretty sure that this is probably covered in all computer science degrees
+and so might seem trivial and basic knowledge to many programmers, but since I
+don&amp;rsquo;t have a CS degree and never had to think much about binary representation,
+this was informative to me!  I should also point out that although I have used
+the C and C++ standards as references, the concepts here are not exclusive to
+these languages.&lt;/p&gt;
+
+&lt;h2 id=&#34;unsigned-integers&#34;&gt;Unsigned integers&lt;/h2&gt;
+
+&lt;p&gt;The &lt;a href=&#34;http://www.open-std.org/jtc1/sc22/WG14/www/docs/n1570.pdf&#34; target=&#34;_blank&#34;&gt;C standard&lt;/a&gt; is
+explicit in its definition of unsigned integers (at least up to C11, the latest
+standard at the time of writing).  It can be found in
+section&amp;nbsp;&lt;strong&gt;6.2.6.2&amp;nbsp;Integer types&lt;/strong&gt;, paragraph&amp;nbsp;1:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;For unsigned integer types other than unsigned char, the bits of the object
+representation shall be divided into two groups: value bits and padding bits
+(there need not be any of the latter). If there are &lt;code&gt;N&lt;/code&gt; value bits, each bit
+shall represent a different power of 2 between 1 and 2&lt;sup&gt;&lt;code&gt;N&lt;/code&gt;−1&lt;/sup&gt;, so that
+objects of that type shall be capable of representing values from 0 to
+2&lt;sup&gt;&lt;code&gt;N&lt;/code&gt;&lt;/sup&gt;&amp;nbsp;−&amp;nbsp;1 using a pure binary representation; this shall
+be known as the value representation. The values of any padding bits are
+unspecified.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;which is sometimes referred to as the pure binary representation.  Other than the
+fact that the wording confused me at first&lt;sup&gt;[1]&lt;/sup&gt;, this basically describes
+a usual &lt;a href=&#34;https://en.wikipedia.org/wiki/Binary_number&#34; target=&#34;_blank&#34;&gt;binary&lt;/a&gt;
+&lt;a href=&#34;https://en.wikipedia.org/wiki/Positional_notation&#34; target=&#34;_blank&#34;&gt;positional number notation&lt;/a&gt;,
+which is much like the decimal positional number notation we commonly use but
+forget about. This is rather intuitive if you are familiar with positional number
+systems.  The most significant bit position (&lt;em&gt;i.e.&lt;/em&gt; the largest exponent bit) is
+not specified in the standard as it varies with hardware (and is more complicated
+then it seems if you get into byte ordering on top of that). The range of the pure
+binary unsigned representation is the following:
+&lt;p style=&#34;text-align: center;&#34;&gt;
+0 &amp;ensp; to &amp;ensp; 2&lt;sup&gt;&lt;code&gt;n&lt;/code&gt;&lt;/sup&gt; &amp;ndash; 1
+&lt;/p&gt;&lt;/p&gt;
+
+&lt;p&gt;where &lt;code&gt;n&lt;/code&gt; is the number of bits used in the representation.  That is how you get
+to the range&amp;nbsp;0 to&amp;nbsp;255 (= 2&lt;sup&gt;8&lt;/sup&gt; &amp;ndash; 1) for an&amp;nbsp;8&amp;nbsp;bit
+number.&lt;/p&gt;
+
+&lt;p&gt;On the other hand, the
+&lt;a href=&#34;http://www.open-std.org/JTC1/SC22/WG21/docs/papers/2017/n4659.pdf&#34; target=&#34;_blank&#34;&gt;C++ standard&lt;/a&gt;
+is more vague on the subject (at least up to C++17, the latest standard at the
+time of writing).  As far as I can tell, it does not impose an explicit
+representation for its unsigned type.  Section &lt;strong&gt;6.9 Types&lt;/strong&gt; of the standard deals
+with type representations and the closest I have found to having an explicit
+representation specified for unsigned types is footnote 45 which says:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;The intent is that the memory model of C++ is compatible with that of ISO/IEC
+9899 Programming Language C.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;which would suggest, I think, that the type representations have to be compatible.
+But that is not exactly explicit.  Then, in paragraph 3, section
+&lt;strong&gt;6.9.1&amp;nbsp;Fundamental types&lt;/strong&gt;, the standard says:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;The range of non-negative values of a signed integer type is a subrange of the
+corresponding unsigned integer type, the representation of the same value in
+each of the two types is the same, and the value representation of each
+corresponding signed/unsigned type shall be the same. [&amp;hellip;]  The signed and
+unsigned integer types shall satisfy the constraints given in the C standard,
+section 5.2.4.2.1.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;This does not imply a pure binary representation.  That said, most if not all C++
+implementations in the field will actually have a pure binary representation for
+unsigned integers.&lt;/p&gt;
+
+&lt;h2 id=&#34;signed-integers&#34;&gt;Signed integers&lt;/h2&gt;
+
+&lt;p&gt;There are a few &lt;a href=&#34;https://en.wikipedia.org/wiki/Signed_number_representations&#34; target=&#34;_blank&#34;&gt;signed integer representations&lt;/a&gt; and, for now at
+least&lt;sup&gt;[2]&lt;/sup&gt;, none of them is explicitly specified (or forbidden) by the
+C or C++ standards.  I have looked at three different representations, the last
+one being the most common if I understand correctly.&lt;/p&gt;
+
+&lt;h3 id=&#34;signed-magnitude&#34;&gt;Signed magnitude&lt;/h3&gt;
+
+&lt;p&gt;&lt;a href=&#34;(https://en.wikipedia.org/wiki/Signed_number_representations#
+Signed_magnitude_representation)&#34; target=&#34;_blank&#34;&gt;Signed magnitude&lt;/a&gt; is the obvious solution to the problem: take
+the first bit and make it a sign bit, &lt;em&gt;i.e.&lt;/em&gt; model the + or &amp;ndash; sign as a 0
+or a 1.  This is actually the mental model I had for signed integers.  The range
+of this solution is:
+&lt;p style=&#34;text-align: center;&#34;&gt;
+&amp;ndash;(2&lt;sup&gt;(&lt;code&gt;n&lt;/code&gt; &amp;ndash; 1)&lt;/sup&gt; &amp;ndash; 1)  &amp;ensp;
+                        to &amp;ensp; 2&lt;sup&gt;(&lt;code&gt;n&lt;/code&gt; &amp;ndash; 1)&lt;/sup&gt; &amp;ndash; 1
+&lt;/p&gt;&lt;/p&gt;
+
+&lt;p&gt;where &lt;code&gt;n&lt;/code&gt; is the number of bits in the representation.  This gives only one less
+number then the unsigned solution, because there are now two bit patterns that
+represent 0.  For instance, for 8 bits, both:
+&lt;p style=&#34;text-align: center;&#34;&gt;
+&lt;code&gt;00000000&lt;/code&gt; &amp;emsp; and &amp;emsp; &lt;code&gt;10000000&lt;/code&gt;
+&lt;/p&gt;&lt;/p&gt;
+
+&lt;p&gt;represent the number zero (albeit, positive 0 and negative 0).  This is not
+really a problem although comparison with zero now has to check for two cases.&lt;/p&gt;
+
+&lt;p&gt;Although the signed magnitude approach seems very natural, it makes the hardware
+to do simple arithmetic operations&amp;nbsp;(+, &amp;ndash;) more complex to write.
+&lt;a href=&#34;https://www2.cs.duke.edu/courses/cps104/fall98/lectures/week1-l2/tsld021.htm&#34; target=&#34;_blank&#34;&gt;From what&lt;/a&gt;
+&lt;a href=&#34;http://scientific-solutions.com/products/faq/ssi_faq_bin_sm_2comp.shtml&#34; target=&#34;_blank&#34;&gt;I read&lt;/a&gt;
+(I am no expert), this is mostly because the sign bit has to be dealt with before
+the operation and the circuitry becomes more complex.  It is mainly for this
+reason that other approaches have been developed.&lt;/p&gt;
+
+&lt;h3 id=&#34;one-s-complement&#34;&gt;One&amp;rsquo;s complement&lt;/h3&gt;
+
+&lt;p&gt;In the &lt;a href=&#34;(https://en.wikipedia.org/wiki/Ones%27_complement)&#34; target=&#34;_blank&#34;&gt;one&amp;rsquo;s complement&lt;/a&gt;
+signed number representation, a negative number is obtained by taking the
+complement of its unsigned representation, &lt;em&gt;i.e.&lt;/em&gt; inverting every bit.  The range
+of this binary representation is the same as that of the signed magnitude
+representation, for the exact same reason: there are two ways of representing the
+number 0.  So, again, the range is:
+&lt;p style=&#34;text-align: center;&#34;&gt;
+&amp;ndash;(2&lt;sup&gt;(&lt;code&gt;n&lt;/code&gt; &amp;ndash; 1)&lt;/sup&gt; &amp;ndash; 1) &amp;ensp;
+                  to &amp;ensp; 2&lt;sup&gt;(&lt;code&gt;n&lt;/code&gt; &amp;ndash; 1)&lt;/sup&gt; &amp;ndash; 1
+&lt;/p&gt;&lt;/p&gt;
+
+&lt;p&gt;where &lt;code&gt;n&lt;/code&gt; is the number of bits in the representation and again, there are two
+representations of zero, albeit not the same as for signed magnitude (e.g.
+for&amp;nbsp;8 bits):
+&lt;p style=&#34;text-align: center;&#34;&gt;
+&lt;code&gt;00000000&lt;/code&gt; &amp;emsp; and &amp;emsp; &lt;code&gt;11111111&lt;/code&gt;
+&lt;/p&gt;&lt;/p&gt;
+
+&lt;p&gt;This binary representation makes algorithms for the addition and subtraction of
+integers much simpler than the signed magnitude representation.  With one&amp;rsquo;s
+complement encoding, the usual algorithm that we do by hand for addition works and
+yields the correct value so long as the leftmost carry bit is added back to the
+result (if it is 0, that&amp;rsquo;s fairly easy ;-) ).  There is a way to remove the need
+to add back the carry bit and that is one characteristic of the next
+representation discussed.&lt;/p&gt;
+
+&lt;h3 id=&#34;two-s-complement&#34;&gt;Two&amp;rsquo;s complement&lt;/h3&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/Two%27s_complement&#34; target=&#34;_blank&#34;&gt;Two&amp;rsquo;s complement&lt;/a&gt; is the last
+method discussed (although not the last one there is, see
+&lt;a href=&#34;https://en.wikipedia.org/wiki/Signed_number_representations&#34; target=&#34;_blank&#34;&gt;Wikipedia&amp;rsquo;s article&lt;/a&gt;
+for at least two more).  This binary representation scheme is, today at least,
+the most prevalent signed integer representation in hardware. This encoding is
+almost the same as one&amp;rsquo;s complement, except that once you have calculated the
+inverted bits of the number, you add one to it.  Two&amp;rsquo;s complement range is:
+&lt;p style=&#34;text-align: center;&#34;&gt;
+&amp;ndash;(2&lt;sup&gt;(&lt;code&gt;n&lt;/code&gt; &amp;ndash; 1)&lt;/sup&gt;) &amp;ensp;
+                     to &amp;ensp; 2&lt;sup&gt;(&lt;code&gt;n&lt;/code&gt; &amp;ndash; 1)&lt;/sup&gt; &amp;ndash; 1
+&lt;/p&gt;&lt;/p&gt;
+
+&lt;p&gt;where &lt;code&gt;n&lt;/code&gt; is the number of bits in the representation.  It should be noted that
+the range is not exactly the same as the one&amp;rsquo;s complement: it is larger by one.
+This is explained by the fact that in this encoding scheme, there is only one
+representation of&amp;nbsp;0, and it is the same as the unsigned&amp;nbsp;0, &lt;em&gt;i.e.&lt;/em&gt; all
+bits set to&amp;nbsp;0.  Opposed to the one&amp;rsquo;s complement representation, in this
+scheme, when all the bits are set to&amp;nbsp;1, the value encoded is not&amp;nbsp;0, but
+rather the smallest negative number (&lt;em&gt;i.e.&lt;/em&gt;&amp;nbsp;-1).  For&amp;nbsp;8&amp;nbsp;bits, the
+first row of the following table illustrates this:
+&lt;table style=&#34;margin-left:auto; margin-right:auto;&#34;&gt;
+   &lt;tr&gt;
+      &lt;th style=&#34;padding:0px 15px;text-align:center;&#34;&gt;bits&lt;br&gt;&lt;/th&gt;
+      &lt;th style=&#34;padding:0px 15px;text-align:center;&#34;&gt;two&amp;rsquo;s&lt;br/&gt;complement&lt;/td&gt;
+      &lt;th style=&#34;padding:0px 15px;text-align:center;&#34;&gt;unsigned&lt;/td&gt;
+   &lt;/tr&gt;
+   &lt;tr&gt;
+      &lt;td style=&#34;padding:0px 15px;text-align:center;&#34;&gt;11111111&lt;br&gt;&lt;/td&gt;
+      &lt;td style=&#34;padding:0px 15px;text-align:center;&#34;&gt;-1&lt;/td&gt;
+      &lt;td style=&#34;padding:0px 15px;text-align:center;&#34;&gt;255&lt;/td&gt;
+   &lt;/tr&gt;
+   &lt;tr&gt;
+      &lt;td style=&#34;padding:0px 15px;text-align:center;&#34;&gt;01111111&lt;br&gt;&lt;/td&gt;
+      &lt;td style=&#34;padding:0px 15px;text-align:center;&#34;&gt;127&lt;/td&gt;
+      &lt;td style=&#34;padding:0px 15px;text-align:center;&#34;&gt;127&lt;/td&gt;
+   &lt;/tr&gt;
+   &lt;tr&gt;
+      &lt;td style=&#34;padding:0px 15px;text-align:center;&#34;&gt;10000000&lt;br&gt;&lt;/td&gt;
+      &lt;td style=&#34;padding:0px 15px;text-align:center;&#34;&gt;-128&lt;/td&gt;
+      &lt;td style=&#34;padding:0px 15px;text-align:center;&#34;&gt;128&lt;/td&gt;
+   &lt;/tr&gt;
+   &lt;tr&gt;
+      &lt;td style=&#34;padding:0px 15px;text-align:center;&#34;&gt;10000001&lt;br&gt;&lt;/td&gt;
+      &lt;td style=&#34;padding:0px 15px;text-align:center;&#34;&gt;-127&lt;/td&gt;
+      &lt;td style=&#34;padding:0px 15px;text-align:center;&#34;&gt;129&lt;/td&gt;
+   &lt;/tr&gt;
+   &lt;tr&gt;
+      &lt;td style=&#34;padding:0px 15px;text-align:center;&#34;&gt;11010111&lt;br&gt;&lt;/td&gt;
+      &lt;td style=&#34;padding:0px 15px;text-align:center;&#34;&gt;-41&lt;/td&gt;
+      &lt;td style=&#34;padding:0px 15px;text-align:center;&#34;&gt;215&lt;/td&gt;
+   &lt;/tr&gt;
+   &lt;tr&gt;
+      &lt;td style=&#34;padding:0px 15px;text-align:center;&#34;&gt;11111110&lt;br&gt;&lt;/td&gt;
+      &lt;td style=&#34;padding:0px 15px;text-align:center;&#34;&gt;-2&lt;/td&gt;
+      &lt;td style=&#34;padding:0px 15px;text-align:center;&#34;&gt;254&lt;/td&gt;
+   &lt;/tr&gt;
+&lt;/table&gt;&lt;/p&gt;
+
+&lt;p&gt;Practically, when you get to the largest signed (positive) integer you can
+represent with the number of bits available, if you increment by one, the bit
+pattern becomes that of the lowest signed (negative) integer you can represent
+(which is illustrated in the second and third rows of the table above).  After
+that, increasing the bit pattern by&amp;nbsp;1 will increase the value by one (fourth
+row of the table).  Citing &lt;a href=&#34;https://en.wikipedia.org/wiki/Two%27s_complement#Why_it_works&#34; target=&#34;_blank&#34;&gt;Wikipedia&amp;rsquo;s entry on two&amp;rsquo;s complement&lt;/a&gt;&lt;sup&gt;[3]&lt;/sup&gt;:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;Fundamentally, the system represents negative integers by counting backward and
+wrapping around.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;This representation then has the interesting property that when going from unsigned
+to signed or vice-versa by only reinterpreting the bit pattern as if it were the
+destination type, the behavior is that of modulo 2&lt;sup&gt;&lt;code&gt;n&lt;/code&gt;-1&lt;/sup&gt; wrapping (which
+is the same as the wrapping behavior mandated by the C standard for unsigned
+integers: wrapping to the value of the highest value plus one).&lt;/p&gt;
+
+&lt;p&gt;Another property of this encoding scheme, and probably a more significant
+advantage compared to the single representation of zero, is that the carry bit
+for the usual algorithm of arithmetic operations (additions, subtractions) must
+simply be ignored to give the correct result.  This differs from the one&amp;rsquo;s
+complement encoding scheme, where it has to be added back.  Thus, arithmetic
+operations are even simpler to implement.  This is probably a big reason why two&amp;rsquo;s
+complement is the dominating binary representation right now.&lt;/p&gt;
+
+&lt;h2 id=&#34;final-thoughts&#34;&gt;Final thoughts&lt;/h2&gt;
+
+&lt;p&gt;I never had to think much about the binary representation of the integers I used.
+I guess that can be attributed to me never working on the kind of applications
+where it matters or always working with a single architecture.  Given that I do
+not, for instance, often do binary file manipulation or networking, I am not sure
+I will personally use this knowledge very often, but in any case, it is good to
+know.&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&#34;notes&#34;&gt;Notes&lt;/h2&gt;
+
+&lt;p&gt;&lt;sup&gt;[1]&lt;/sup&gt;The standard talks about the values represented and not the
+exponent, so that it talks about the series:&lt;/p&gt;
+
+&lt;p&gt;&amp;emsp;&amp;emsp; 1, 2, 4, 8, 16&amp;hellip;&lt;/p&gt;
+
+&lt;p&gt;of successive evaluations of the exponents of 2 rather than the successive
+exponents themselves, which actually start at zero.  This had confused me at
+first, but &lt;a href=&#34;http://h-deb.clg.qc.ca/&#34; target=&#34;_blank&#34;&gt;Patrice Roy&lt;/a&gt; and
+&lt;a href=&#34;http://www.aaronballman.com/&#34; target=&#34;_blank&#34;&gt;Aaron Ballman&lt;/a&gt; helped me see that I had
+misinterpreted the standard.  Thanks to both of them.&lt;/p&gt;
+
+&lt;p&gt;&lt;sup&gt;[2]&lt;/sup&gt;In the 2018 Jacksonville meeting of the ISO C++ Committee, a paper
+has been presented to officially &lt;a href=&#34;http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0907r0.html&#34; target=&#34;_blank&#34;&gt;make signed integers two&amp;rsquo;s complement&lt;/a&gt;.  There
+is no certainty on the future of this paper, but the idea was also presented to
+the C standard committee and the discussions in both committee will take place to
+see if this is something they will pursue.&lt;/p&gt;
+
+&lt;p&gt;&lt;sup&gt;[3]&lt;/sup&gt;The sentence was taken from the linked page on April 28 2018.&lt;/p&gt;
+</description>
+      </item>
+      
     
       
       <item>
         <title>Friends only class</title>
         <link>https://ghlecl.github.io/microposts/friends_only_class/</link>
         <pubDate>Tue, 28 Nov 2017 13:30:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
+        <author>codeattempts@gmail.com - Ghyslain Leclerc</author>
         <guid>https://ghlecl.github.io/microposts/friends_only_class/</guid>
         <description>
 
@@ -56,7 +335,7 @@
         <title>Count chars in lines</title>
         <link>https://ghlecl.github.io/microposts/count_chars_in_n_first_lines/</link>
         <pubDate>Wed, 22 Nov 2017 12:30:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
+        <author>codeattempts@gmail.com - Ghyslain Leclerc</author>
         <guid>https://ghlecl.github.io/microposts/count_chars_in_n_first_lines/</guid>
         <description>
 
@@ -79,7 +358,7 @@
         <title>Return type overloading</title>
         <link>https://ghlecl.github.io/posts/return_type_overload/</link>
         <pubDate>Thu, 12 Oct 2017 00:00:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
+        <author>codeattempts@gmail.com - Ghyslain Leclerc</author>
         <guid>https://ghlecl.github.io/posts/return_type_overload/</guid>
         <description>
 
@@ -169,7 +448,7 @@ int main( int argc, char* argv[] )
         <title>rvalue references in C&#43;&#43;</title>
         <link>https://ghlecl.github.io/posts/learning_rvalues/</link>
         <pubDate>Tue, 10 Jan 2017 00:00:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
+        <author>codeattempts@gmail.com - Ghyslain Leclerc</author>
         <guid>https://ghlecl.github.io/posts/learning_rvalues/</guid>
         <description>
 
@@ -392,33 +671,91 @@ std::string to_string( T&amp;amp;&amp;amp; to_convert )
         <title>Using a theme with Hugo</title>
         <link>https://ghlecl.github.io/posts/hugo_theme/</link>
         <pubDate>Thu, 05 Jan 2017 00:00:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
+        <author>codeattempts@gmail.com - Ghyslain Leclerc</author>
         <guid>https://ghlecl.github.io/posts/hugo_theme/</guid>
         <description>
 
 &lt;h1 id=&#34;hugo-themes&#34;&gt;Hugo themes&lt;/h1&gt;
 
-&lt;p&gt;Initially, I had two objectives for this blog.  One was to have a place where I could write some notes on programming for myself so that I could find them when I needed them.  The other was to learn a bit more about the web.&lt;/p&gt;
+&lt;p&gt;Initially, I had two objectives for this blog.  One was to have a place where I
+could write some notes on programming for myself so that I could find them when
+I needed them.  The other was to learn a bit more about the web.&lt;/p&gt;
 
-&lt;p&gt;I thought (naively, granted) I could write it all myself using a static site generator.  I wanted to write the HTML, the CSS, the JavaScript, everything!  I thought it would not be too difficult using the templating engine of the static site generator and a front end development framework (&lt;a href=&#34;http://foundation.zurb.com/&#34; target=&#34;_blank&#34;&gt;Zurb Foundation&lt;/a&gt; was my initial choice).  Turns out I was both right and wrong.&lt;/p&gt;
+&lt;p&gt;I thought (naively, granted) I could write it all myself using a static site
+generator.  I wanted to write the HTML, the CSS, the JavaScript, everything!  I
+thought it would not be too difficult using the templating engine of the static
+site generator and a front end development framework
+(&lt;a href=&#34;http://foundation.zurb.com/&#34; target=&#34;_blank&#34;&gt;Zurb Foundation&lt;/a&gt; was my initial choice).  Turns
+out I was both right and wrong.&lt;/p&gt;
 
-&lt;p&gt;Using the static site generator and a CSS/front end framework, I was able to get a basic site working with little previous knowledge of CSS and HTML.  My background is actually physics and so web programming is something new to me.  Took me a few nights, but it was up and running in a reasonable amount of time (for me).  Unfortunately, it turns out it was not as easy/quick as I had hoped to set it up, let alone customize the site.  I quickly found myself spending more and more time on the &amp;ldquo;mechanics&amp;rdquo; of the site and barely any time at all writing my programming notes.&lt;/p&gt;
+&lt;p&gt;Using the static site generator and a CSS/front end framework, I was able to get
+a basic site working with little previous knowledge of CSS and HTML.  My
+background is actually physics and so web programming is something new to me.
+Took me a few nights, but it was up and running in a reasonable amount of time
+(for me).  Unfortunately, it turns out it was not as easy/quick as I had hoped to
+set it up, let alone customize the site.  I quickly found myself spending more and
+more time on the &amp;ldquo;mechanics&amp;rdquo; of the site and barely any time at all writing my
+programming notes.&lt;/p&gt;
 
-&lt;p&gt;As I said, I was both right and wrong: you can make a site form scratch without too much difficulty using the static site generator and a web framework, but it still takes a fair amount of time, time which I found out I was not willing to spend.  So I set out to explore &lt;a href=&#34;https://gohugo.io/&#34; target=&#34;_blank&#34;&gt;Hugo&amp;rsquo;s&lt;/a&gt; theming mechanism and the &lt;a href=&#34;http://themes.gohugo.io/&#34; target=&#34;_blank&#34;&gt;available themes&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;As I said, I was both right and wrong: you can make a site form scratch without
+too much difficulty using the static site generator and a web framework, but it
+still takes a fair amount of time, time which I found out I was not willing to
+spend.  So I set out to explore &lt;a href=&#34;https://gohugo.io/&#34; target=&#34;_blank&#34;&gt;Hugo&amp;rsquo;s&lt;/a&gt; theming mechanism
+and the &lt;a href=&#34;http://themes.gohugo.io/&#34; target=&#34;_blank&#34;&gt;available themes&lt;/a&gt;.&lt;/p&gt;
 
-&lt;p&gt;I considered quite a few of them.  I was looking for something simple and did not have that many requirements (I think).  I really wanted to have pagination and, if possible, search and &lt;a href=&#34;https://disqus.com/&#34; target=&#34;_blank&#34;&gt;Disqus&lt;/a&gt; integration (the latter two I ended up dropping).  I also did not want too many fonts and too many moving parts.  Ideally, it would not be too hard to customize the site/theme.  Analytics do not really interest me.  All and all, nothing too fancy.&lt;/p&gt;
+&lt;p&gt;I considered quite a few of them.  I was looking for something simple and did not
+have that many requirements (I think).  I really wanted to have pagination and,
+if possible, search and &lt;a href=&#34;https://disqus.com/&#34; target=&#34;_blank&#34;&gt;Disqus&lt;/a&gt; integration (the latter
+two I ended up dropping).  I also did not want too many fonts and too many
+moving parts.  Ideally, it would not be too hard to customize the site/theme.
+Analytics do not really interest me.  All and all, nothing too fancy.&lt;/p&gt;
 
-&lt;p&gt;At some point, I was interested in Google&amp;rsquo;s &lt;a href=&#34;https://material.io/&#34; target=&#34;_blank&#34;&gt;Material Design&lt;/a&gt; and so thought a theme using it might be nice.  Unfortunately, I could not find a material design based theme that was simple enough for me to customize (of course, others might disagree on that!).  Then I thought something using &lt;a href=&#34;http://webcomponents.org/&#34; target=&#34;_blank&#34;&gt;Web Components&lt;/a&gt; might be interesting so I looked into a theme using &lt;a href=&#34;https://www.polymer-project.org/1.0/&#34; target=&#34;_blank&#34;&gt;Polymer&lt;/a&gt;.  Again, nothing easy enough to customize for my skill level.  I think that is the point: anything interesting or new will take me too much time to work on and take me away from writing, which for me is the point of all this.&lt;/p&gt;
+&lt;p&gt;At some point, I was interested in Google&amp;rsquo;s
+&lt;a href=&#34;https://material.io/&#34; target=&#34;_blank&#34;&gt;Material Design&lt;/a&gt; and so thought a theme using it might
+be nice.  Unfortunately, I could not find a material design based theme that was
+simple enough for me to customize (of course, others might disagree on that!).
+Then I thought something using &lt;a href=&#34;http://webcomponents.org/&#34; target=&#34;_blank&#34;&gt;Web Components&lt;/a&gt; might
+be interesting so I looked into a theme using
+&lt;a href=&#34;https://www.polymer-project.org/1.0/&#34; target=&#34;_blank&#34;&gt;Polymer&lt;/a&gt;.  Again, nothing easy enough to
+customize for my skill level.  I think that is the point: anything interesting or
+new will take me too much time to work on and take me away from writing, which
+for me is the point of all this.&lt;/p&gt;
 
-&lt;p&gt;So in the end, I chose a theme that is out of the box really pleasing to me: &lt;a href=&#34;http://themes.gohugo.io/internet-weblog/&#34; target=&#34;_blank&#34;&gt;Internet Weblog&lt;/a&gt; by &lt;a href=&#34;http://jnjosh.com/&#34; target=&#34;_blank&#34;&gt;Josh Johnson&lt;/a&gt;.  Really nice theme which is, at least up till now, easy enough to customize to my needs.  The only thing I have had trouble with is the fact that the theme was written for an older Hugo version and some template syntax (mainly capitalization of variable names) was not portable to the current version (0.18 when writing this).  I was able to fairly quickly make the necessary changes to the theme and allow it to run on the version of Hugo I am using.&lt;/p&gt;
+&lt;p&gt;So in the end, I chose a theme that is out of the box really pleasing to me:
+&lt;a href=&#34;http://themes.gohugo.io/internet-weblog/&#34; target=&#34;_blank&#34;&gt;Internet Weblog&lt;/a&gt; by
+&lt;a href=&#34;http://jnjosh.com/&#34; target=&#34;_blank&#34;&gt;Josh Johnson&lt;/a&gt;.  Really nice theme which is, at least up till
+now, easy enough to customize to my needs.  The only thing I have had trouble
+with is the fact that the theme was written for an older Hugo version and some
+template syntax (mainly capitalization of variable names) was not portable to the
+current version (0.18 when writing this).  I was able to fairly quickly make the
+necessary changes to the theme and allow it to run on the version of Hugo I am
+using.&lt;/p&gt;
 
-&lt;p&gt;In the future, I might look into creating a search box for the site.  Currently, this blog does not hold that many posts, but the theme comes with the idea/concept of microposts which I really like.  Microposts actually serve my purpose of programming notes even better than full posts, I think.  Often, I solve a small problem in a particular way and I would like to remember my solution without writing a full blog post about it (usually because it does not warrant that).  Writing a small 1-2 paragraph micropost to remember the solution would be perfect.  The problem is if too many of those pile up, then you can&amp;rsquo;t find them easily anymore.  So a search box for the site would be nice.  At least that&amp;rsquo;s what I think right now.&lt;/p&gt;
+&lt;p&gt;In the future, I might look into creating a search box for the site.  Currently,
+this blog does not hold that many posts, but the theme comes with the idea/concept
+of microposts which I really like.  Microposts actually serve my purpose of
+programming notes even better than full posts, I think.  Often, I solve a small
+problem in a particular way and I would like to remember my solution without
+writing a full blog post about it (usually because it does not warrant that).
+Writing a small 1-2 paragraph micropost to remember the solution would be perfect.
+The problem is if too many of those pile up, then you can&amp;rsquo;t find them easily
+anymore.  So a search box for the site would be nice.  At least that&amp;rsquo;s what I
+think right now.&lt;/p&gt;
 
-&lt;p&gt;As for Disqus integration, I thought it might be interesting to discuss (no pun intended) the more technical posts I write here with people, but it&amp;rsquo;s really a low priority.  I usually take things to heart a little too much and the internet is the best place to be told you are dumb in a very &amp;ldquo;nonconstructive&amp;rdquo; manner.  Those two probably don&amp;rsquo;t mix well and so not opening my posts for comments might be a better idea for me.  Who knows what the future holds.&lt;/p&gt;
+&lt;p&gt;As for Disqus integration, I thought it might be interesting to discuss (no pun
+intended) the more technical posts I write here with people, but it&amp;rsquo;s really a
+low priority.  I usually take things to heart a little too much and the internet
+is the best place to be told you are dumb in a very &amp;ldquo;nonconstructive&amp;rdquo; manner.
+Those two probably don&amp;rsquo;t mix well and so not opening my posts for comments might
+be a better idea for me.  Who knows what the future holds.&lt;/p&gt;
 
-&lt;p&gt;This means that the information about my &lt;a href=&#34;https://ghlecl.github.io/posts/hugo/&#34; target=&#34;_blank&#34;&gt;initial Hugo setup&lt;/a&gt; is already out of date and invalid.  I might try and write a post (micropost?) about the new setup in the near future, but basically, I mostly use default values and a theme.&lt;/p&gt;
+&lt;p&gt;This means that the information about my
+&lt;a href=&#34;https://ghlecl.github.io/posts/hugo/&#34; target=&#34;_blank&#34;&gt;initial Hugo setup&lt;/a&gt; is already out of date and
+invalid.  I might try and write a post (micropost?) about the new setup in the
+near future, but basically, I mostly use default values and a theme.&lt;/p&gt;
 
-&lt;p&gt;So now that I have a theme that I like for the site, I can start posting a bit more often (hopefully).&lt;/p&gt;
+&lt;p&gt;So now that I have a theme that I like for the site, I can start posting a bit
+more often (hopefully).&lt;/p&gt;
 </description>
       </item>
       
@@ -428,7 +765,7 @@ std::string to_string( T&amp;amp;&amp;amp; to_convert )
         <title>Timing pieces of code</title>
         <link>https://ghlecl.github.io/posts/cxx_time_it/</link>
         <pubDate>Sun, 20 Mar 2016 00:00:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
+        <author>codeattempts@gmail.com - Ghyslain Leclerc</author>
         <guid>https://ghlecl.github.io/posts/cxx_time_it/</guid>
         <description>
 
@@ -618,21 +955,36 @@ exp 5: [ 55, 55, 55 ]
         <title>My Hugo Setup</title>
         <link>https://ghlecl.github.io/posts/hugo/</link>
         <pubDate>Sun, 14 Feb 2016 00:00:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
+        <author>codeattempts@gmail.com - Ghyslain Leclerc</author>
         <guid>https://ghlecl.github.io/posts/hugo/</guid>
         <description>
 
 &lt;h1 id=&#34;hugo&#34;&gt;Hugo&lt;/h1&gt;
 
-&lt;p&gt;I have decided to go with &lt;a href=&#34;https://gohugo.io/&#34; target=&#34;_blank&#34;&gt;Hugo&lt;/a&gt; and &lt;a href=&#34;https://pages.github.com/&#34; target=&#34;_blank&#34;&gt;Github Pages&lt;/a&gt; for this note taking blog.  This is simply me describing my setup with Hugo and explaining what I have been able to accomplish to this point.  It is not much, but writing it down helps me clarify my thoughts and insures I don&amp;rsquo;t have to figure it out again (which, ironically, I had to do to write and post this entry!).&lt;/p&gt;
+&lt;p&gt;I have decided to go with &lt;a href=&#34;https://gohugo.io/&#34; target=&#34;_blank&#34;&gt;Hugo&lt;/a&gt; and
+&lt;a href=&#34;https://pages.github.com/&#34; target=&#34;_blank&#34;&gt;Github Pages&lt;/a&gt; for this note taking blog.  This is
+simply me describing my setup with Hugo and explaining what I have been able to
+accomplish to this point.  It is not much, but writing it down helps me clarify
+my thoughts and insures I don&amp;rsquo;t have to figure it out again (which, ironically,
+I had to do to write and post this entry!).&lt;/p&gt;
 
 &lt;h3 id=&#34;static-site-generation-via-hugo&#34;&gt;Static site generation via Hugo&lt;/h3&gt;
 
-&lt;p&gt;Basically, in Hugo (as in many &lt;a href=&#34;https://www.staticgen.com/&#34; target=&#34;_blank&#34;&gt;static site generators&lt;/a&gt;), the idea is to write content in files with a given format (often &lt;a href=&#34;https://daringfireball.net/projects/markdown/&#34; target=&#34;_blank&#34;&gt;markdown&lt;/a&gt;) and specify how to build a website out of this content via template/layout files.  Once you run the executable (literally &lt;code&gt;hugo&lt;/code&gt;) on the directory structure containing all those content and layout files, a static website is generated.  To mark a file as a content file, you put a YAML or TOML header at the beginning of the file.  Some information in the header is required by Hugo, some is optional and some is custom.&lt;/p&gt;
+&lt;p&gt;Basically, in Hugo (as in many &lt;a href=&#34;https://www.staticgen.com/&#34; target=&#34;_blank&#34;&gt;static site generators&lt;/a&gt;),
+the idea is to write content in files with a given format (often
+&lt;a href=&#34;https://daringfireball.net/projects/markdown/&#34; target=&#34;_blank&#34;&gt;markdown&lt;/a&gt;) and specify how to
+build a website out of this content via template/layout files.  Once you run the
+executable (literally &lt;code&gt;hugo&lt;/code&gt;) on the directory structure containing all those
+content and layout files, a static website is generated.  To mark a file as a
+content file, you put a YAML or TOML header at the beginning of the file.  Some
+information in the header is required by Hugo, some is optional and some is custom.&lt;/p&gt;
 
 &lt;h3 id=&#34;the-setup&#34;&gt;The setup&lt;/h3&gt;
 
-&lt;p&gt;The executable must know where to look for content and layouts/templates.  It also has to have access to styling elements (CSS and images for instance).  It has default locations where it looks for all those files and pre-supposes a few names, but most of it is configurable.  Here is what I used:&lt;/p&gt;
+&lt;p&gt;The executable must know where to look for content and layouts/templates.  It also
+has to have access to styling elements (CSS and images for instance).  It has
+default locations where it looks for all those files and pre-supposes a few names,
+but most of it is configurable.  Here is what I used:&lt;/p&gt;
 
 &lt;table&gt;
 &lt;thead&gt;
@@ -688,17 +1040,48 @@ exp 5: [ 55, 55, 55 ]
 &lt;/tbody&gt;
 &lt;/table&gt;
 
-&lt;p&gt;Unfortunately, capitalization matters and is not consistent.  All the variables available can be &lt;a href=&#34;https://gohugo.io/overview/configuration/&#34; target=&#34;_blank&#34;&gt;found&lt;/a&gt; on the Hugo site.&lt;/p&gt;
+&lt;p&gt;Unfortunately, capitalization matters and is not consistent.  All the variables
+available can be &lt;a href=&#34;https://gohugo.io/overview/configuration/&#34; target=&#34;_blank&#34;&gt;found&lt;/a&gt; on the Hugo
+site.&lt;/p&gt;
 
 &lt;h3 id=&#34;versioning-and-publishing&#34;&gt;Versioning and publishing&lt;/h3&gt;
 
-&lt;p&gt;To keep versions of all my posts and the site, I will be using &lt;a href=&#34;https://git-scm.com/&#34; target=&#34;_blank&#34;&gt;Git&lt;/a&gt; as my version control software, unsurprisingly as I am publishing on Github Pages.  I have made a setup inspired by the &lt;a href=&#34;https://gohugo.io/tutorials/github-pages-blog/&#34; target=&#34;_blank&#34;&gt;tutorial&lt;/a&gt;, but not exactly as they suggest.&lt;/p&gt;
+&lt;p&gt;To keep versions of all my posts and the site, I will be using
+&lt;a href=&#34;https://git-scm.com/&#34; target=&#34;_blank&#34;&gt;Git&lt;/a&gt; as my version control software, unsurprisingly as I
+am publishing on Github Pages.  I have made a setup inspired by the
+&lt;a href=&#34;https://gohugo.io/tutorials/github-pages-blog/&#34; target=&#34;_blank&#34;&gt;tutorial&lt;/a&gt;, but not exactly as
+they suggest.&lt;/p&gt;
 
-&lt;p&gt;I actually want to keep my drafts private.  If I decide to commit drafts to the version control in order to work on ideas, I do not want all those draft versions with typos, bad sentences, bad ideas and brainstorming to be seen by everyone.  A private Git repository is needed for that and since I have not yet decided to pay for a private Github account, I cannot have a private repository on that site.  To get a private repository, I have chosen to use &lt;a href=&#34;https://bitbucket.org/&#34; target=&#34;_blank&#34;&gt;Bitbucket&lt;/a&gt;.  With that provider, I can get 5 private repositories for free.  Thus, I have a private Git repository for my site.  This is also where I keep my template code and everything that Hugo needs to create the site.  I do not version the public directory in that repository.  To insure that, it is added to the .gitignore file.&lt;/p&gt;
+&lt;p&gt;I actually want to keep my drafts private.  If I decide to commit drafts to the
+version control in order to work on ideas, I do not want all those draft versions
+with typos, bad sentences, bad ideas and brainstorming to be seen by everyone.
+A private Git repository is needed for that and since I have not yet decided to
+pay for a private Github account, I cannot have a private repository on that site.
+To get a private repository, I have chosen to use
+&lt;a href=&#34;https://bitbucket.org/&#34; target=&#34;_blank&#34;&gt;Bitbucket&lt;/a&gt;.  With that provider, I can get 5 private
+repositories for free.  Thus, I have a private Git repository for my site.  This
+is also where I keep my template code and everything that Hugo needs to create
+the site.  I do not version the public directory in that repository.  To insure
+that, it is added to the .gitignore file.&lt;/p&gt;
 
-&lt;p&gt;Actually, were it not for the fact that the way Github Pages work is to publish the master branch of a repository, I would not need another repository.  I would simply version the raw materials Hugo needs and I would replace the public content on the public server knowing that I can regenerate a version whenever I want for the foreseeable future.  That being said, I cannot do that because Github pages actually simply serves the last commit of master on your personal page (username.github.io) or the latest commit of the gh-pages branch for a project page.  In any case, I need a repository with at least one commit.  Whenever I want to publish the site, I make a commit in the development git repository and tag it as a site release with the date.  Then, I delete everything inside the public directory except the .git folder and regenerate the site with Hugo.  Any content that is not set to draft gets generated.  After that, I &lt;code&gt;cd&lt;/code&gt; into the public folder (the public git repository), make a commit and push.  Voilà, the site is updated.&lt;/p&gt;
+&lt;p&gt;Actually, were it not for the fact that the way Github Pages work is to publish
+the master branch of a repository, I would not need another repository.  I would
+simply version the raw materials Hugo needs and I would replace the public content
+on the public server knowing that I can regenerate a version whenever I want for
+the foreseeable future.  That being said, I cannot do that because Github pages
+actually simply serves the last commit of master on your personal page
+(username.github.io) or the latest commit of the gh-pages branch for a project
+page.  In any case, I need a repository with at least one commit.  Whenever I
+want to publish the site, I make a commit in the development git repository and
+tag it as a site release with the date.  Then, I delete everything inside the
+public directory except the .git folder and regenerate the site with Hugo.  Any
+content that is not set to draft gets generated.  After that, I &lt;code&gt;cd&lt;/code&gt; into the
+public folder (the public git repository), make a commit and push.  Voilà, the
+site is updated.&lt;/p&gt;
 
-&lt;p&gt;I cannot predict what problems I&amp;rsquo;ll have with this setup, but for now, it seems fine and so I&amp;rsquo;ll run with it.  I&amp;rsquo;ll write another post later if I have to make changes.&lt;/p&gt;
+&lt;p&gt;I cannot predict what problems I&amp;rsquo;ll have with this setup, but for now, it seems
+fine and so I&amp;rsquo;ll run with it.  I&amp;rsquo;ll write another post later if I have to make
+changes.&lt;/p&gt;
 </description>
       </item>
       
@@ -706,26 +1089,70 @@ exp 5: [ 55, 55, 55 ]
       
       <item>
         <title>Static Site</title>
-        <link>https://ghlecl.github.io/posts/staticsite/</link>
+        <link>https://ghlecl.github.io/posts/static_site/</link>
         <pubDate>Tue, 29 Dec 2015 00:00:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
-        <guid>https://ghlecl.github.io/posts/staticsite/</guid>
+        <author>codeattempts@gmail.com - Ghyslain Leclerc</author>
+        <guid>https://ghlecl.github.io/posts/static_site/</guid>
         <description>
 
 &lt;h1 id=&#34;hugo&#34;&gt;Hugo&lt;/h1&gt;
 
-&lt;p&gt;In a &lt;a href=&#34;https://ghlecl.github.io/posts/githubpages/&#34; target=&#34;_blank&#34;&gt;previous&lt;/a&gt; entry, I described how I got to using &lt;a href=&#34;https://pages.github.com/&#34; target=&#34;_blank&#34;&gt;GitHub Pages&lt;/a&gt;.  That was one of the (if not the) first question I had to figure out when I decided to write my notes in an Internet format (ok, blog, but I don&amp;rsquo;t see myself as a blogger).  The second thing I had to figure out was what to use as a writing tool.  I could simply write static HTML by hand and leave it at that (actually, if you stumbled upon this website before I posted my first few posts, I left a Hello World page up for a few weeks/months while figuring all this out!).  I am trying to set the bar a little higher than that for myself.&lt;/p&gt;
+&lt;p&gt;In a &lt;a href=&#34;https://ghlecl.github.io/posts/github_pages/&#34; target=&#34;_blank&#34;&gt;previous&lt;/a&gt; entry, I described how I got
+to using &lt;a href=&#34;https://pages.github.com/&#34; target=&#34;_blank&#34;&gt;GitHub Pages&lt;/a&gt;.  That was one of the (if not
+the) first question I had to figure out when I decided to write my notes in an
+Internet format (ok, blog, but I don&amp;rsquo;t see myself as a blogger).  The second thing
+I had to figure out was what to use as a writing tool.  I could simply write
+static HTML by hand and leave it at that (actually, if you stumbled upon this
+website before I posted my first few posts, I left a Hello World page up for a few
+weeks/months while figuring all this out!).  I am trying to set the bar a little
+higher than that for myself.&lt;/p&gt;
 
-&lt;p&gt;For work, I have been playing with &lt;a href=&#34;https://www.djangoproject.com&#34; target=&#34;_blank&#34;&gt;Django&lt;/a&gt; and at some point, I thought I could write something in Django or use a Django CMS, but since GitHub Pages only serve static content, I had to abandon that plan.  I could have done static HTML with some CSS framework like &lt;a href=&#34;http://getbootstrap.com&#34; target=&#34;_blank&#34;&gt;Bootstrap&lt;/a&gt; or &lt;a href=&#34;http://foundation.zurb.com&#34; target=&#34;_blank&#34;&gt;Foundation&lt;/a&gt;.  Actually, that is how I started to write all of this, but then, the same friend of mine that pointed me in the direction of GitHub Pages, also reminded me that they suggest a workflow with &lt;a href=&#34;http://jekyllrb.com&#34; target=&#34;_blank&#34;&gt;Jekyll&lt;/a&gt;.  Trying to get information about that, I learned that Jekyll is what is called a static site generator and that there are quite a few &lt;a href=&#34;https://www.staticgen.com/&#34; target=&#34;_blank&#34;&gt;alternatives&lt;/a&gt; out there.  Looking at a few of the alternatives, I decided to go with &lt;a href=&#34;https://gohugo.io/&#34; target=&#34;_blank&#34;&gt;Hugo&lt;/a&gt; (no pun intended), originally written by &lt;a href=&#34;https://github.com/spf13&#34; target=&#34;_blank&#34;&gt;Steve Francia&lt;/a&gt;.  I can&amp;rsquo;t claim to have researched the subject extensively, but Hugo seemed like it was configurable enough for my needs/tastes, fast enough and easy enough.&lt;/p&gt;
+&lt;p&gt;For work, I have been playing with &lt;a href=&#34;https://www.djangoproject.com&#34; target=&#34;_blank&#34;&gt;Django&lt;/a&gt; and at
+some point, I thought I could write something in Django or use a Django CMS, but
+since GitHub Pages only serve static content, I had to abandon that plan.  I could
+have done static HTML with some CSS framework like
+&lt;a href=&#34;http://getbootstrap.com&#34; target=&#34;_blank&#34;&gt;Bootstrap&lt;/a&gt; or &lt;a href=&#34;http://foundation.zurb.com&#34; target=&#34;_blank&#34;&gt;Foundation&lt;/a&gt;.
+Actually, that is how I started to write all of this, but then, the same friend
+of mine that pointed me in the direction of GitHub Pages, also reminded me that
+they suggest a workflow with &lt;a href=&#34;http://jekyllrb.com&#34; target=&#34;_blank&#34;&gt;Jekyll&lt;/a&gt;.  Trying to get
+information about that, I learned that Jekyll is what is called a static site
+generator and that there are quite a few
+&lt;a href=&#34;https://www.staticgen.com/&#34; target=&#34;_blank&#34;&gt;alternatives&lt;/a&gt; out there.  Looking at a few of the
+alternatives, I decided to go with &lt;a href=&#34;https://gohugo.io/&#34; target=&#34;_blank&#34;&gt;Hugo&lt;/a&gt; (no pun intended),
+originally written by &lt;a href=&#34;https://github.com/spf13&#34; target=&#34;_blank&#34;&gt;Steve Francia&lt;/a&gt;.  I can&amp;rsquo;t claim
+to have researched the subject extensively, but Hugo seemed like it was
+configurable enough for my needs/tastes, fast enough and easy enough.&lt;/p&gt;
 
-&lt;p&gt;Basically, the idea of a static site generator is to &amp;ldquo;build&amp;rdquo; a website telling a build system (I like to think of it as a compiler) how to construct each individual page using templates.  Then, all you do is generate new (mostly) unformatted content and ask the generator to rebuild the site.  This will update everything and include the new content.  As it constructs these pages, the build system will make a list of the entries and collect bits and pieces of informations which it will make available to you via a templating language (Hugo being written in &lt;a href=&#34;https://golang.org/&#34; target=&#34;_blank&#34;&gt;Go&lt;/a&gt;, it uses Go&amp;rsquo;s templating language).  You will be able to access that information more or less easily depending on the templating language and insert it in your templates.  For instance, to create a page listing all the posts of the site, you could, in the template, loop through the list of posts and add each of them in a &lt;code&gt;&amp;lt;ul&amp;gt;&lt;/code&gt; element.  As another example, you can get the title of the post in the template so that when designing the page, you can style that title as you please.  For instance:&lt;/p&gt;
+&lt;p&gt;Basically, the idea of a static site generator is to &amp;ldquo;build&amp;rdquo; a website telling a
+build system (I like to think of it as a compiler) how to construct each individual
+page using templates.  Then, all you do is generate new (mostly) unformatted
+content and ask the generator to rebuild the site.  This will update everything
+and include the new content.  As it constructs these pages, the build system will
+make a list of the entries and collect bits and pieces of informations which it
+will make available to you via a templating language (Hugo being written in
+&lt;a href=&#34;https://golang.org/&#34; target=&#34;_blank&#34;&gt;Go&lt;/a&gt;, it uses Go&amp;rsquo;s templating language).  You will be able
+to access that information more or less easily depending on the templating
+language and insert it in your templates.  For instance, to create a page listing
+all the posts of the site, you could, in the template, loop through the list of
+posts and add each of them in a &lt;code&gt;&amp;lt;ul&amp;gt;&lt;/code&gt; element.  As another example, you can get
+the title of the post in the template so that when designing the page, you can
+style that title as you please.  For instance:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-html&#34;&gt;&amp;lt;h2 style=&amp;quot;bad idea, use CSS !&amp;quot;&amp;gt; $.Page.Title &amp;lt;/h2&amp;gt;
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;I am not suggesting it is a good practice to style that way (as mentioned in the example), but it illustrates my point about the variables.  In the templates, you can also include JavaScript or any other kind of valid HTML you want.  You can therefore use a front-end CSS framework like &lt;a href=&#34;http://zurb.com/&#34; target=&#34;_blank&#34;&gt;Zurb&lt;/a&gt; Foundation or &lt;a href=&#34;https://twitter.com/&#34; target=&#34;_blank&#34;&gt;Twitter&lt;/a&gt; Bootstrap.&lt;/p&gt;
+&lt;p&gt;I am not suggesting it is a good practice to style that way (as mentioned in
+the example), but it illustrates my point about the variables.  In the templates,
+you can also include JavaScript or any other kind of valid HTML you want.  You can
+therefore use a front-end CSS framework like &lt;a href=&#34;http://zurb.com/&#34; target=&#34;_blank&#34;&gt;Zurb&lt;/a&gt; Foundation
+or &lt;a href=&#34;https://twitter.com/&#34; target=&#34;_blank&#34;&gt;Twitter&lt;/a&gt; Bootstrap.&lt;/p&gt;
 
-&lt;p&gt;Alright, this is how I got to Hugo.  I will stop here and start a new post on my setup.  The next post will mark my first post that will actually be what I want for this little site: notes for me on how I did things.  It really is necessary.  Since writing the previous post, I have not done anything involving Hugo and already, I can&amp;rsquo;t really remember the organization of all of this.  Hopefully, taking notes will help.&lt;/p&gt;
+&lt;p&gt;Alright, this is how I got to Hugo.  I will stop here and start a new post on my
+setup.  The next post will mark my first post that will actually be what I want
+for this little site: notes for me on how I did things.  It really is necessary.
+Since writing the previous post, I have not done anything involving Hugo and
+already, I can&amp;rsquo;t really remember the organization of all of this.  Hopefully,
+taking notes will help.&lt;/p&gt;
 </description>
       </item>
       
@@ -733,23 +1160,56 @@ exp 5: [ 55, 55, 55 ]
       
       <item>
         <title>GitHub Pages</title>
-        <link>https://ghlecl.github.io/posts/githubpages/</link>
+        <link>https://ghlecl.github.io/posts/github_pages/</link>
         <pubDate>Mon, 23 Nov 2015 00:00:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
-        <guid>https://ghlecl.github.io/posts/githubpages/</guid>
+        <author>codeattempts@gmail.com - Ghyslain Leclerc</author>
+        <guid>https://ghlecl.github.io/posts/github_pages/</guid>
         <description>
 
 &lt;h1 id=&#34;github-pages&#34;&gt;GitHub Pages&lt;/h1&gt;
 
-&lt;p&gt;This is one of my first posts.  I have been toying with the idea of this blog for quite some time now.  A flaw of mine: too much searching for the best solution, not enough implementing.  I end up doing things too late.  Anyhow, I digress.&lt;/p&gt;
+&lt;p&gt;This is one of my first posts.  I have been toying with the idea of this blog for
+quite some time now.  A flaw of mine: too much searching for the best solution,
+not enough implementing.  I end up doing things too late.  Anyhow, I digress.&lt;/p&gt;
 
-&lt;p&gt;One of the relevant questions when thinking of writing a blog is of course where to publish and what tool(s) to use.  At some point, I was thinking of hosting on an old computer of mine.  Played with the different servers (compiled &lt;a href=&#34;https://httpd.apache.org&#34; target=&#34;_blank&#34;&gt;Apache&lt;/a&gt;, &lt;a href=&#34;https://www.lighttpd.net&#34; target=&#34;_blank&#34;&gt;lighttpd&lt;/a&gt; and &lt;a href=&#34;https://www.nginx.com&#34; target=&#34;_blank&#34;&gt;Nginx&lt;/a&gt;).  Then, I realized all the time involved in maintaining my own server and changed my mind.  I did not want to deal with the security updates and the log checking (or the program checking the logs&amp;hellip;).  Not that I am naïve enough to think my content is worth hacking, but using my machine on a bot net or whatnot might be.&lt;/p&gt;
+&lt;p&gt;One of the relevant questions when thinking of writing a blog is of course where
+to publish and what tool(s) to use.  At some point, I was thinking of hosting on
+an old computer of mine.  Played with the different servers (compiled
+&lt;a href=&#34;https://httpd.apache.org&#34; target=&#34;_blank&#34;&gt;Apache&lt;/a&gt;, &lt;a href=&#34;https://www.lighttpd.net&#34; target=&#34;_blank&#34;&gt;lighttpd&lt;/a&gt; and
+&lt;a href=&#34;https://www.nginx.com&#34; target=&#34;_blank&#34;&gt;Nginx&lt;/a&gt;).  Then, I realized all the time involved in
+maintaining my own server and changed my mind.  I did not want to deal with the
+security updates and the log checking (or the program checking the logs&amp;hellip;).  Not
+that I am naïve enough to think my content is worth hacking, but using my machine
+on a bot net or whatnot might be.&lt;/p&gt;
 
-&lt;p&gt;After that, I started looking into shared hosting.  That could have worked, I even paid for a few months, but did nothing productive.  Was still learning everything and for some reason (a friend of mine would say control issues, but who knows really !), I did not want to go with &lt;a href=&#34;https://wordpress.com/&#34; target=&#34;_blank&#34;&gt;WordPress&lt;/a&gt;, &lt;a href=&#34;https://www.joomla.org/&#34; target=&#34;_blank&#34;&gt;Joomla&lt;/a&gt; or another content management system.  That seemed like overkill for my needs and yes, I like to control things on my computer a little too much for my own good and I did not feel I could get control over those behemoths in a reasonable timeframe.  Most of the shared hosting I looked into (probably not exhaustive) seemed pre-configured for the CMS like systems, but not for other things and I found myself again trying to configure Apache on the shared host.&lt;/p&gt;
+&lt;p&gt;After that, I started looking into shared hosting.  That could have worked, I
+even paid for a few months, but did nothing productive.  Was still learning
+everything and for some reason (a friend of mine would say control issues, but who
+knows really !), I did not want to go with &lt;a href=&#34;https://wordpress.com/&#34; target=&#34;_blank&#34;&gt;WordPress&lt;/a&gt;,
+&lt;a href=&#34;https://www.joomla.org/&#34; target=&#34;_blank&#34;&gt;Joomla&lt;/a&gt; or another content management system.  That
+seemed like overkill for my needs and yes, I like to control things on my computer
+a little too much for my own good and I did not feel I could get control over
+those behemoths in a reasonable timeframe.  Most of the shared hosting I looked
+into (probably not exhaustive) seemed pre-configured for the CMS like systems, but
+not for other things and I found myself again trying to configure Apache on the
+shared host.&lt;/p&gt;
 
-&lt;p&gt;I gave up for a while.  I was busy with other things; but lately, I have been coming back to the idea of this blog.  Hence my looking into all those things again.  That&amp;rsquo;s when a very good friend of mine suggested I look into &lt;a href=&#34;https://pages.github.com/&#34; target=&#34;_blank&#34;&gt;GitHub Pages&lt;/a&gt;.  The idea is very interesting and if someone else is reading this, it means I actually went through with this.  I personally have two basic needs for a server: 1) writing a blog (and maybe a private section as a journal) and 2) hosting private projects on Git.  With GitHub Pages, I can actually easily create the blog and if I pay for a GitHub account, I believe I should be able to do the private journal and the Git hosting as well.  The monthly cost will be roughly the same as a hosted plan and I will have almost zero if not zero administration to do.&lt;/p&gt;
+&lt;p&gt;I gave up for a while.  I was busy with other things; but lately, I have been
+coming back to the idea of this blog.  Hence my looking into all those things
+again.  That&amp;rsquo;s when a very good friend of mine suggested I look into
+&lt;a href=&#34;https://pages.github.com/&#34; target=&#34;_blank&#34;&gt;GitHub Pages&lt;/a&gt;.  The idea is very interesting and if
+someone else is reading this, it means I actually went through with this.  I
+personally have two basic needs for a server: 1) writing a blog (and maybe a
+private section as a journal) and 2) hosting private projects on Git.  With
+GitHub Pages, I can actually easily create the blog and if I pay for a GitHub
+account, I believe I should be able to do the private journal and the Git hosting
+as well.  The monthly cost will be roughly the same as a hosted plan and I will
+have almost zero if not zero administration to do.&lt;/p&gt;
 
-&lt;p&gt;So that&amp;rsquo;s how I came to GitHub pages!  I am sure that since I am a novice at the Internet (well creating content other then on my Facebook account), there are some assumptions I have made that are wrong and my solution might be sub-optimal, but it works for me.&lt;/p&gt;
+&lt;p&gt;So that&amp;rsquo;s how I came to GitHub pages!  I am sure that since I am a novice at the
+Internet (well creating content other then on my Facebook account), there are some
+assumptions I have made that are wrong and my solution might be sub-optimal, but
+it works for me.&lt;/p&gt;
 
 &lt;p&gt;Now, let&amp;rsquo;s see if I can make a habit of writing.&lt;/p&gt;
 </description>
@@ -761,7 +1221,7 @@ exp 5: [ 55, 55, 55 ]
         <title>About Me</title>
         <link>https://ghlecl.github.io/about/</link>
         <pubDate>Mon, 09 Nov 2015 00:00:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
+        <author>codeattempts@gmail.com - Ghyslain Leclerc</author>
         <guid>https://ghlecl.github.io/about/</guid>
         <description>&lt;p&gt;Hi.  I&amp;rsquo;m Ghys, a French Canadian living in the province of Québec, Canada.  I make a living as a medical physicist.  I like trying to get computers to do the actual data crunching for me.  I am a hobbyist programmer and this blog is mostly a way for me to write down notes and lessons about my code attempts.  I also write about random stuff.  Feel free to read or skip whatever you want!&lt;/p&gt;
 </description>

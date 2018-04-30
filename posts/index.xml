@@ -1,697 +1,92 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-
-    <title>@ghlecl’s Code Attempts - Posts</title>
+    <title>Posts on Code Attempts</title>
     <link>https://ghlecl.github.io/posts/</link>
-    <description>All entries in Posts on Code Attempts</description>
+    <description>Recent content in Posts on Code Attempts</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
+    <managingEditor>codeattempts@gmail.com</managingEditor>
+    <webMaster>codeattempts@gmail.com</webMaster>
+    <lastBuildDate>Mon, 30 Apr 2018 00:00:00 +0000</lastBuildDate>
     
-    <lastBuildDate>Thu, 12 Oct 2017 00:00:00 +0000</lastBuildDate>
-    <atom:link href="/posts/" rel="self" type="application/rss+xml" />
+	<atom:link href="https://ghlecl.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
     
-      
-      <item>
-        <title>Return type overloading</title>
-        <link>https://ghlecl.github.io/posts/return_type_overload/</link>
-        <pubDate>Thu, 12 Oct 2017 00:00:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
-        <guid>https://ghlecl.github.io/posts/return_type_overload/</guid>
-        <description>
-
-&lt;h1 id=&#34;no-return-type-overloading&#34;&gt;No return type overloading&lt;/h1&gt;
-
-&lt;p&gt;In C++, return type does not participate in function overload resolution, i.e. it is not possible to overload a function on the return type.  Thus, this is not legal C++:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;void to_lower( std::string&amp;amp; strg );
-std::string to_lower( std::string&amp;amp; strg );
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The compiler will issue an error when it sees the second declaration.&lt;sup&gt;[1]&lt;/sup&gt;  For instance, the error Clang emits is the following: &amp;ldquo;error: functions that differ only in their return type cannot be overloaded&amp;rdquo;.  The detailed reasons for this rule are irrelevant in the current discussion: it is just a fact.  I believe it is partially due to C++ allowing you to ignore the return value of a function if you so choose.  Thus, even for a function returning an int, you can call it without using or even capturing the return value:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-C++&#34;&gt;int fn( int );
-
-auto ret_val = fn( 5 );
-fn( 12 ); // legal call, simply drops the return value
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;In the example, if &lt;code&gt;fn&lt;/code&gt; were overloaded on return type only, how would the second call be disambiguated?  I am far from certain this is the only reason why, but it is convincing enough for me.&lt;/p&gt;
-
-&lt;p&gt;Still, I really wanted to be able to have an &amp;ldquo;in place&amp;rdquo; and &amp;ldquo;not in place&amp;rdquo; version of the &lt;code&gt;to_lower&lt;/code&gt; function I wrote.  And, &lt;a href=&#34;https://twitter.com/secretGeek/status/7269997868&#34; target=&#34;_blank&#34;&gt;naming things is hard&lt;/a&gt;, so I did not want to have to change the name of the function.  Cheating a little bit, I have found a way to &lt;em&gt;simulate&lt;/em&gt; function overloading on return type or at least make it possible to have the same name for the two functions and (almost) only a differing return type.&lt;/p&gt;
-
-&lt;p&gt;With what I came up with, one of the two overloads becomes a template and must be called explicitly, so no ADL or overload resolution alone can help me and template argument deduction cannot be used either because the function parameter(s) do not depend on the template parameter.  After all, it is illegal to overload on return type in C++ and my technique does not imply changing the ISO C++ standard!&lt;/p&gt;
-
-&lt;h3 id=&#34;how-i-cheated&#34;&gt;How I &lt;em&gt;cheated&lt;/em&gt;&lt;/h3&gt;
-
-&lt;p&gt;All I did is use a template parameter as a tag for one version of the function.  I created an empty struct as a tag and templated one of the versions (the one the tag corresponds to).  Then, when I want that version to be called, I explicitly select the templated version passing the tag as an explicitly specified template argument.  Here is a code sample to illustrate/explain better:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-C++&#34;&gt;#include &amp;lt;type_traits&amp;gt;
-#include &amp;lt;string&amp;gt;
-#include &amp;lt;cstdio&amp;gt;
-namespace ns
-{
-struct in_place {};
-
-template&amp;lt; typename Tag &amp;gt;
-void to_lower( std::string&amp;amp; strg )
-{
-   static_assert( std::is_same&amp;lt; Tag, in_place &amp;gt;::value,
-                     &amp;quot;only in_place is allowed as the template parameter&amp;quot; );
-   //... implementation here ...
-}
-
-std::string to_lower( std::string&amp;amp; strg )
-{
-   //... implementation here ...
-   return strg;
-}
-
-} // namespace ns
-
-int main( int argc, char* argv[] )
-{
-   using ns::in_place;
-   using ns::to_lower;
-
-   std::string to_change( &amp;quot;This STring is Mixed CASe.&amp;quot; );
-
-   auto new_strg = to_lower( to_change );
-   to_lower&amp;lt; in_place &amp;gt;( to_change );
-
-   printf( &amp;quot;%s\n&amp;quot;, ( to_change == new_strg ? &amp;quot;true&amp;quot; : &amp;quot;false&amp;quot; ) );
-   return 0;
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Users of the function are provided with the tag and can use it to call the &amp;ldquo;overload&amp;rdquo; (so to speak, not an actual overload, I know).  Compilers are actually pretty good at eliminating empty classes from the code, even at not too high optimization levels.  So I am confident that the tag should disappear completely from the resulting binary and there should be no runtime downside to this technique.&lt;sup&gt;[2]&lt;/sup&gt;  Also, if appropriate, one function can be implemented using the other.  To ensure that types other than the provided tag can&amp;rsquo;t be used for the function call, I put a &lt;code&gt;static_assert&lt;/code&gt; in the implementation.  Otherwise, any type could be put in there (as in &lt;code&gt;to_lower&amp;lt;int&amp;gt;&lt;/code&gt;), which although it would work, would not be as explicit and as clear.  I don&amp;rsquo;t know why anyone would want do that, but I forbid it explicitly in my implementation.&lt;/p&gt;
-
-&lt;p&gt;What I did is no revolution and nothing fancy, but it does allow me to get the interface I need from my function, namely two functions with the same name differing only in return types&amp;hellip; or almost.  I also find it to be expressive: it is clear at the call site that I will be modifying the string that is passed in.  Some might like it, others won&amp;rsquo;t!  If you find it useful, good.&lt;/p&gt;
-
-&lt;h3 id=&#34;alternative&#34;&gt;Alternative&lt;/h3&gt;
-
-&lt;p&gt;A friend suggested that another possible implementation would be to use variadic templates and call the function with an empty diamond.  I tried that version and it is possible.  I even put in a &lt;code&gt;static_assert&lt;/code&gt; to check that the function can&amp;rsquo;t be called with a non empty parameter pack.  That being said, I find that it is better to have the empty struct as a tag because it is a bit more explicit which overload actually acts in place (whereas in the empty parameter pack alternative, it is clear which overload is called (the template), but not whether this is the one working in place).  I suspect either implementation would result in the same binary code.  To me, another argument in favor of keeping the tag is that &lt;a href=&#34;https://arne-mertz.de/2016/tag-dispatch/&#34; target=&#34;_blank&#34;&gt;tag dispatching&lt;/a&gt; (which my technique is similar to) is familiar to many C++ programmers while seeing a call with the empty diamond is not so common (I think, I might be completely wrong).&lt;/p&gt;
-
-&lt;h3 id=&#34;notes&#34;&gt;Notes&lt;/h3&gt;
-
-&lt;p&gt;&lt;sup&gt;[1]&lt;/sup&gt; I know that the second overload, the one returning a new string, could take it&amp;rsquo;s parameter by reference or by value (since I&amp;rsquo;m probably doing a copy in the implementation anyhow).  That would have complicated the explanation of the overloads (as in that case, both functions would not technically be exactly differing only in return type), so I chose to write my examples that way in the post.&lt;/p&gt;
-
-&lt;p&gt;&lt;sup&gt;[2]&lt;/sup&gt; I would have &amp;ldquo;Godbolted&amp;rdquo; my code, but I am not that good at reading assembler and when I tried with the std::string, the resulting assembler contains much more than my function and is not that simple to analyse.  I did it with ints, but then, starting at -O2, main becomes almost empty as the compiler can see all the constants and simplify all the way.&lt;/p&gt;
-</description>
-      </item>
-      
     
-      
-      <item>
-        <title>rvalue references in C&#43;&#43;</title>
-        <link>https://ghlecl.github.io/posts/learning_rvalues/</link>
-        <pubDate>Tue, 10 Jan 2017 00:00:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
-        <guid>https://ghlecl.github.io/posts/learning_rvalues/</guid>
-        <description>
-
-&lt;h1 id=&#34;move-rvalues-forward-and-c&#34;&gt;move, rvalues, forward and C++&lt;/h1&gt;
-
-&lt;p&gt;Ever since I heard about it, the concept of move semantics has been intriguing and appealing to me.  I confess to liking new C++ things and micro-optimizations way too much&amp;hellip; but still, the concept of &amp;ldquo;moving&amp;rdquo; memory instead of copying it in order to gain efficiency is at least worth exploring, right?  Anyhow, I chose a function of mine and decided to try and make it handle move semantics properly. The function I chose is one that I use often enough that I thought it would make a difference.  It is the following template&lt;sup&gt;[1]&lt;/sup&gt;:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt; typename T &amp;gt;
-std::string to_string( T const&amp;amp; to_convert )
-{
-   std::stringstream strm( &amp;quot;&amp;quot; );
-   strm &amp;lt;&amp;lt; to_convert;
-   return strm.str();
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Now, it turns out that because it is a templated function, move semantics will have to be mixed with forwarding references and that, if you ask me, those things are gibberish if you don&amp;rsquo;t understand lvalues and rvalues.  This is what started my adventures into rvalue land.  After going through the process, I now realize that for this particular case, it is not really useful because &lt;a href=&#34;http://en.cppreference.com/w/cpp/io/basic_ostream/operator_ltlt&#34; target=&#34;_blank&#34;&gt;as far as I can tell&lt;/a&gt;,  &lt;code&gt;std::strinstream::operator&amp;lt;&amp;lt;&lt;/code&gt; is not overloaded on rvalue references.  Still, the exercise was enlightening and I now know (or at least think I know) a lot more about rvalues.  The information here is nothing new, probably incomplete and also probably full of inaccuracies when compared to the strict standard C++ language definitions (after all, this is in my own words), but I have found the information useful.  I guess this is a snapshot of my current understanding.  All the better if it helps anybody else.  Now, on to my journey.&lt;/p&gt;
-
-&lt;h3 id=&#34;a-new-kind-of-references&#34;&gt;A new kind of references: &amp;amp;&amp;amp;&lt;/h3&gt;
-
-&lt;p&gt;The idea behind move semantics is that when you need the value a variable contains and it is a temporary (or simply about to get out of scope), you could make the memory it owns yours instead of copying the value in your own memory.  This should execute faster then the copying as it is doing less work.  Of course, saving copies will not make much difference is you are copying a single &lt;code&gt;int&lt;/code&gt;, but if you are, for instance, copying a &lt;code&gt;std::vector&lt;/code&gt; of an image class, stealing the pointer to the images instead of copying the memory should have a large impact on runtime efficiency.  For this to be possible, there has to be a mechanism to detect the temporary nature of a variable and select what to do when a variable is temporary and when a variable is not.  Starting with the 2011 standard, C++ now defines rvalue references, identified by a double ampersand symbol (&lt;code&gt;&amp;amp;&amp;amp;&lt;/code&gt;), which will only bind to temporary values.&lt;/p&gt;
-
-&lt;p&gt;This gives us a way to determine if a parameter is a temporary value: create an overload (or a single function) which takes an rvalue reference as its input.  Since this reference parameter will only bind to a temporary value, one can assume that the parameter cannot normally be used elsewhere in the program once the function returns.  When this guarantee holds, one can safely steal (or move) the internals of the parameter(s) instead of making a copy(ies), potentially making the function more efficient.  This is the crux of move semantics.  Of course, the devil is in the details, as I have found out.&lt;/p&gt;
-
-&lt;h4 id=&#34;quick-digression-value-categories&#34;&gt;Quick digression: value categories&lt;/h4&gt;
-
-&lt;p&gt;Lvalues and rvalues are &lt;a href=&#34;http://en.cppreference.com/w/cpp/language/value_category&#34; target=&#34;_blank&#34;&gt;value categories&lt;/a&gt;.  Those two categories have been part of C++ since its first standardization in 1998 and were carried over from C (although in C, no rvalues were directly defined and &amp;ldquo;not lvalue&amp;rdquo; was deemed sufficient&lt;sup&gt;[2]&lt;/sup&gt;).  Those two categories take their name from their original, although now erroneous, definition, which was to think of them as the &amp;ldquo;left&amp;rdquo; and &amp;ldquo;right&amp;rdquo; operands of an assignment:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;int a = 7; // a is an lvalue and 7 is an rvalue
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;With that definition, &amp;ldquo;assignability&amp;rdquo; appears as the main difference between lvalues and rvalues: if something cannot be assigned to, it is an rvalue.  I honestly do not know if it is the case in C, but I know that is not the case in C++.  Here is an example of an lvalue that is not assignable in C++.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;const int b{ 8 }; // b is an lvalue
-b = 9; // error, can&#39;t assign to const even though it is an lvalue
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The const variable is still an lvalue, but one cannot assign a new value to it after construction.  So although it is not assignable, it is an lvalue.  It is my understanding that the more interesting property is not &amp;ldquo;assignability&amp;rdquo;, but rather &amp;ldquo;addressability&amp;rdquo;, i.e. the capacity to refer to a value.  I can take the address of both variables defined in the previous examples and refer to it, but I cannot take the address of the literals and refer to them later in the program.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;int a;
-int&amp;amp; c = &amp;amp;a; // valid
-int&amp;amp; d = &amp;amp;8; // invalid, can&#39;t refer to (or take address of) the literal 8
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;So a better rule for rvalues is the following: if I can take the address of a value or expression and reference it later in the program, the value is an lvalue; otherwise, it is an rvalue.&lt;/p&gt;
-
-&lt;p&gt;This is not the complete picture of value categories, since five value categories are now defined in C++ (lvalues, glvalues, rvalues, prvalues and xvalues), but it turns out to be an adequate rule of thumb for lvalue/rvalue discrimination and that is what matters most for move semantics.  In &lt;a href=&#34;https://isocpp.org/blog/2012/11/universal-references-in-c11-scott-meyers&#34; target=&#34;_blank&#34;&gt;this&lt;/a&gt; blog post on &lt;a href=&#34;http://isocpp.org&#34; target=&#34;_blank&#34;&gt;isocpp.org&lt;/a&gt;, &lt;a href=&#34;http://scottmeyers.blogspot.ca/&#34; target=&#34;_blank&#34;&gt;Scott Meyers&lt;/a&gt; gives this heuristics to determine the general type (lvalue vs rvalue) of an expression or variable:&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;If you can take the address of an expression, the expression is an lvalue.&lt;/li&gt;
-&lt;li&gt;If the type of an expression is an lvalue reference (e.g., &lt;code&gt;T&amp;amp;&lt;/code&gt; or `const T&amp;amp;, etc.), that expression is an lvalue.&lt;/li&gt;
-&lt;li&gt;Otherwise, the expression is an rvalue.&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;which is a quote from the linked blog post.  Again, in Scott&amp;rsquo;s words:&lt;/p&gt;
-
-&lt;blockquote&gt;
-&lt;p&gt;Conceptually (and typically also in fact), rvalues correspond to temporary objects, such as those returned from functions or created through implicit type conversions. Most literal values (e.g., 10 and 5.3) are also rvalues.&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;p&gt;I think a nice feature of this heuristic is that it helps you remember that the type of an expression is independent of whether the expression is an lvalue or an rvalue. That is, given a type &lt;code&gt;T&lt;/code&gt;, you can have lvalues of type &lt;code&gt;T&lt;/code&gt; as well as rvalues of type &lt;code&gt;T&lt;/code&gt;. It’s especially important to remember this when dealing with a [function] parameter of rvalue reference type, because the parameter itself is an lvalue.&lt;/p&gt;
-
-&lt;p&gt;That last sentence took me a while to fully understand.  It is illustrated by the following example (where the new double ampersand symbol (&lt;code&gt;&amp;amp;&amp;amp;&lt;/code&gt;) for rvalue references is used):&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;void foo( MyType&amp;amp;&amp;amp; param )
-{
-   auto&amp;amp; alias = &amp;amp;param;  // Completely legal: param has a memory location
-                          // inside the function body.  Thus, by the heuristic
-                          // above, param is an lvalue.
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This fact that the parameter is an lvalue inside the function might seem like a simple detail, but it will turn out to be necessary to explain why &lt;code&gt;std::move&lt;/code&gt; and &lt;code&gt;std::forward&lt;/code&gt; are necessary later on.&lt;/p&gt;
-
-&lt;h4 id=&#34;overloading-on-rvalue-reference&#34;&gt;Overloading on rvalue reference&lt;/h4&gt;
-
-&lt;p&gt;So the idea, as mentioned, is to create an overload on rvalue references.  There is no way of representing rvalues (almost by definition from a certain point of view), so rvalue references are the only option.  The following is a simple example.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;#include &amp;lt;iostream&amp;gt;
-
-int bar()
-{ return 9; }
-
-// const lvalue reference overload
-void foo( int const&amp;amp; param )
-{ std::cout &amp;lt;&amp;lt; &amp;quot;foo( int const&amp;amp; param )&amp;quot; &amp;lt;&amp;lt; std::endl; }
-
-// rvalue reference overload
-void foo( int&amp;amp;&amp;amp; param )
-{ std::cout &amp;lt;&amp;lt; &amp;quot;foo( int&amp;amp;&amp;amp; param )&amp;quot; &amp;lt;&amp;lt; std::endl; }
-
-// by copy overload, do not define as it will yield
-//       error: call to &#39;foo&#39; is ambiguous
-// void foo( int param )
-// { std::cout &amp;lt;&amp;lt; &amp;quot;foo( int param )&amp;quot; &amp;lt;&amp;lt; std::endl; }
-
-int main( int argc, char* argv[] )
-{
-   int a{ 6 };
-   int&amp;amp; b{ a };
-   const int&amp;amp; c{ b };
-   foo( a );     // calls first foo
-   foo( b );     // calls first foo
-   foo( c );     // calls first foo
-   foo( 7 );     // calls second foo
-   foo( bar() ); // calls second foo
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;In this case, this does not buy you much, but the snippet above is compilable by any C++11 conformant compiler.  This little code should output &lt;code&gt;foo( int const&amp;amp; param )&lt;/code&gt; three times and &lt;code&gt;foo( int&amp;amp;&amp;amp; param )&lt;/code&gt; twice.  A non compilable but more realistic/useful example would be:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;std::vector&amp;lt;int&amp;gt; foo();
-
-// two functions constructing a MyCoolClass object from a vector&amp;lt;int&amp;gt;
-MyCoolClass make_from_std_vec( std::vector&amp;lt;int&amp;gt; const&amp;amp; vec ); /* overload 1 */
-MyCoolClass make_from_std_vec( std::vector&amp;lt;int&amp;gt;&amp;amp;&amp;amp; vec );      /* overload 2 */
-
-std::vector&amp;lt;int&amp;gt; the_vec;
-/* fill the_vec */
-
-auto obj_1 = make_from_std_vec( the_vec );  // binds to overload 1
-auto obj_2 = make_from_std_vec( foo() );    // binds to overload 2
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Here, because &lt;code&gt;std::vector&lt;/code&gt; has been updated to allow move semantics, the second overload will be able to move the memory instead of copying it into the &lt;code&gt;MyCoolClass&lt;/code&gt; object which should save a copy.&lt;/p&gt;
-
-&lt;h4 id=&#34;implementing-enters-std-move&#34;&gt;Implementing : enters std::move&lt;/h4&gt;
-
-&lt;p&gt;Once you have an overload which selects the rvalues, you have to implement it.  Most (if not all) POD types and STL types have been updated for move semantics, although I am not sure that moving is faster than copying in the case of &lt;code&gt;int&lt;/code&gt;, for instance.  That being said, this means that move constructors and move assignment operators are available for &lt;code&gt;std::vector&lt;/code&gt;.  If you pass an rvalue to those, they will move.  But that brings us back to the discussion on function parameters inside of the function being lvalues.  That means that the following will not actually move anything and will instead make a copy:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;std::vector&amp;lt;int&amp;gt; steal_guts_and_do_stuff( std::vector&amp;lt;int&amp;gt;&amp;amp;&amp;amp; vec )
-{
-   std::vector&amp;lt;int&amp;gt; result( vec );   // INCORRECT, will not move
-   /* do stuff */
-   return result;
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;That is because even though &lt;a href=&#34;http://en.cppreference.com/w/cpp/container/vector/vector&#34; target=&#34;_blank&#34;&gt;there is&lt;/a&gt; an overload of the &lt;code&gt;std::vector&lt;/code&gt; constructor for rvalues, what you actually passed as a parameter (&lt;code&gt;vec&lt;/code&gt;) is &lt;em&gt;&lt;strong&gt;not&lt;/strong&gt;&lt;/em&gt; an rvalue (that was explained in previous sections).  Thus, the compiler will select the copy constructor instead of the move constructor.  That being said, because you are implementing the rvalue reference overload of your function (in this case, the &lt;code&gt;steal_guts_and_do_stuff&lt;/code&gt; function), you know that in the &lt;em&gt;&lt;strong&gt;caller&lt;/strong&gt;&lt;/em&gt; scope, the parameter is actually an rvalue.  This means if you had a way to cast the parameter to an rvalue inside the function implementation to tell the compiler to select the move constructor for &lt;code&gt;std::vector&lt;/code&gt;, then that one would be selected.  This can be done with the new function &lt;code&gt;std::move&lt;/code&gt;.  All this function does is &lt;em&gt;&lt;strong&gt;unconditionally&lt;/strong&gt;&lt;/em&gt; cast its input to an rvalue reference.  The casting is done via the &lt;a href=&#34;http://en.cppreference.com/w/cpp/language/reference&#34; target=&#34;_blank&#34;&gt;reference&lt;/a&gt; &lt;a href=&#34;http://thbecker.net/articles/rvalue_references/section_08.html&#34; target=&#34;_blank&#34;&gt;collapsing rules&lt;/a&gt;.   Thus, the implementation above should actually be written as:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;std::vector&amp;lt;int&amp;gt; steal_guts_and_do_stuff( std::vector&amp;lt;int&amp;gt;&amp;amp;&amp;amp; vec )
-{
-   std::vector&amp;lt;int&amp;gt; result( std::move( vec ) );
-   /* do stuff */
-   return result;
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;where you can see that &lt;code&gt;std::move&lt;/code&gt; has been used on &lt;code&gt;vec&lt;/code&gt;.  That is pretty much it.  Just insure that in your rvalue overload implementations, you use &lt;code&gt;std::move&lt;/code&gt; on all the parameters that you want to move from and that you do not reuse those parameters after they have been moved from.  If you want your user defined types to be &amp;ldquo;movable from&amp;rdquo;, then define a move constructor and a move assignment operator and then a user will be able to move from your types.  And notice that you do not use &lt;code&gt;std::move&lt;/code&gt; on the return statement.  Moving is done when you &lt;em&gt;use&lt;/em&gt; the input parameter to cast it to an rvalue forcing the compiler to take the rvalue overload of the function you are calling (in my case, move constructor).  You do not want to move the return.&lt;/p&gt;
-
-&lt;h3 id=&#34;and-then-they-were-three-t&#34;&gt;And then they were three: T&amp;amp;&amp;amp;&lt;/h3&gt;
-
-&lt;p&gt;As I have previously mentioned, the function that I wanted to convert to move semantics was a template.  There is a catch in this case.  Actually, this function declaration:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt; typename T &amp;gt;
-void foo( T&amp;amp;&amp;amp; param );
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;does &lt;strong&gt;&lt;em&gt;not&lt;/em&gt;&lt;/strong&gt; declare an rvalue reference overload.  The reference here is a forwarding reference&lt;sup&gt;[3]&lt;/sup&gt;.  Referencing once again Scott Meyer&amp;rsquo;s &lt;a href=&#34;https://isocpp.org/blog/2012/11/universal-references-in-c11-scott-meyers&#34; target=&#34;_blank&#34;&gt;blog post&lt;/a&gt; on &lt;a href=&#34;http://isocpp.org&#34; target=&#34;_blank&#34;&gt;isocpp.org&lt;/a&gt;, one finds this rule of thumb to determine the if an expression is a forwarding reference:&lt;/p&gt;
-
-&lt;blockquote&gt;
-&lt;p&gt;If a variable or parameter is declared to have type T&amp;amp;&amp;amp; for some deduced type T, that variable or parameter is a universal reference.&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;p&gt;Deduced type mostly means templates and `auto (which I won&amp;rsquo;t talk about anymore).  What is particular about forwarding references is that they can bind to both lvalues and rvalues, depending on what type (not value) it is initialized with.  In fact, they will bind to lvalues, rvalues, const, non-const, volatile, non-volatile&amp;hellip;  This makes them really greedy and has some interesting consequences on the overload set, but that&amp;rsquo;s not the subject here.&lt;/p&gt;
-
-&lt;p&gt;So now, three types of references have been mentioned: lvalue references, rvalue references and forwarding references.  When implementing a function overload for one of the reference type, inside the function body, one must make sure to understand what should happen.  For an lvalue reference overload, the parameter is an lvalue and should never be moved from.  For an rvalue reference overload, the parameter is always an rvalue, thus temporary, and can always be moved from.  For a forwarding reference, the parameter can be either an lvalue or an rvalue and should be moved from in the latter case, but not the former.  The need to cast in the function body has been previously explained.  I also mentioned that the tool to cast unconditionally to an rvalue reference is &lt;code&gt;std::move&lt;/code&gt;.  For forwarding references, the tool to &lt;strong&gt;&lt;em&gt;conditionally&lt;/em&gt;&lt;/strong&gt; cast to rvalue references is &lt;code&gt;std::forward&lt;/code&gt;.  This standard library template will cast an lvalue reference (or something that binds to an lvalue reference) to an lvalue reference and an rvalue reference (or something that binds to an rvalue reference) to an rvalue reference.  The mechanism used for this is reference collapsing and the result is exactly what we need to implement the forwarding reference overload.  The following code snippet illustrates what usually should be done:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;MyClass from_vec( std::vector const&amp;amp; vec )
-{
-   return MyClass{ vec };
-}
-
-MyClass from_vec( std::vector&amp;amp;&amp;amp; vec )
-{
-   return MyClass{ std::move( vec ) };
-}
-
-template&amp;lt; typename C &amp;gt;
-MyClass from_container( C&amp;amp;&amp;amp; container )
-{
-   return MyClass{ std::forward&amp;lt; C &amp;gt;( vec ) };
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;It should be noted that for &lt;code&gt;std::forward&lt;/code&gt;, template argument deduction &lt;a href=&#34;http://stackoverflow.com/questions/7779900/why-is-template-argument-deduction-disabled-with-stdforward&#34; target=&#34;_blank&#34;&gt;would not produce&lt;/a&gt; &lt;a href=&#34;http://stackoverflow.com/questions/28828159/usage-of-stdforward-vs-stdmove&#34; target=&#34;_blank&#34;&gt;the desired results&lt;/a&gt;, so the type has to be repeated in the call to the function.&lt;/p&gt;
-
-&lt;h3 id=&#34;the-result&#34;&gt;The result&lt;/h3&gt;
-
-&lt;p&gt;So, now, I have everything I need to write my function.  It is a template, so it will use the forwarding references.  This is my new implementation:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt; typename T &amp;gt;
-std::string to_string( T&amp;amp;&amp;amp; to_convert )
-{
-   std::stringstream strm( &amp;quot;&amp;quot; );
-   strm &amp;lt;&amp;lt; std::forward&amp;lt;T&amp;gt;( to_convert );
-   return strm.str();
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;If (and as I pointed out in the intro, it is not the case) the &lt;code&gt;stringstream&lt;/code&gt; redirect operator (&lt;code&gt;&amp;lt;&amp;lt;&lt;/code&gt;) has an rvalue overload which steals the internals of it&amp;rsquo;s argument, it will do so for the cases where &lt;code&gt;to_string&lt;/code&gt; is called with an rvalue and it will use the regular lvalue reference overload when called with an lvalue.  This is the &amp;ldquo;optimal&amp;rdquo; or near optimal behavior for my function.&lt;/p&gt;
-
-&lt;p&gt;To get to my implementation, I had first simply stuck a &lt;code&gt;&amp;amp;&amp;amp;&lt;/code&gt; symbol to my reference (removing the const, of course) and used &lt;code&gt;std::move&lt;/code&gt;.  It failed for reasons that are now apparent from the discussion in the previous sections.  After that, I started to read all of the references I link in these notes (and more) and realized I needed to use &lt;code&gt;std::forward&lt;/code&gt;.  I finally realized that for my function, this is useless, but the journey was worth it!&lt;/p&gt;
-
-&lt;h3 id=&#34;notes&#34;&gt;Notes&lt;/h3&gt;
-
-&lt;p&gt;&lt;sup&gt;[1]&lt;/sup&gt; Yes, I am sure someone else would do a better job at writing it more &lt;a href=&#34;http://zverovich.net/2013/09/07/integer-to-string-conversion-in-cplusplus.html&#34; target=&#34;_blank&#34;&gt;generic, faster, better&lt;/a&gt;, etc.; not the point!&lt;/p&gt;
-
-&lt;p&gt;&lt;sup&gt;[2]&lt;/sup&gt; The C language itself borrowed the concepts from CPL (see &lt;a href=&#34;http://blog.smartbear.com/development/c11-tutorial-explaining-the-ever-elusive-lvalues-and-rvalues/&#34; target=&#34;_blank&#34;&gt;this&lt;/a&gt; blog post by Danny Kalev).&lt;/p&gt;
-
-&lt;p&gt;&lt;sup&gt;[3]&lt;/sup&gt; Scott Meyers used the terminology Universal References both in his articles and his book &lt;a href=&#34;http://shop.oreilly.com/product/0636920033707.do&#34; target=&#34;_blank&#34;&gt;Effective Modern C++&lt;/a&gt;, but after discussion with members of the ISO C++ committee and the C++ community, he agreed to include a footnote (in Item 24) to say that since they should almost always be used with &lt;code&gt;std::forward&lt;/code&gt;, the name forwarding references is gaining traction.&lt;/p&gt;
-
-&lt;p&gt;&lt;sup&gt;[4]&lt;/sup&gt; Unreferenced in the text: &lt;a href=&#34;http://stackoverflow.com/questions/36696312/why-is-pass-by-value-and-pass-by-rvalue-overload-c-function-call-ambiguous&#34; target=&#34;_blank&#34;&gt;ambiguous call&lt;/a&gt;&lt;/p&gt;
-</description>
-      </item>
-      
+    <item>
+      <title>Integer binary representations</title>
+      <link>https://ghlecl.github.io/posts/integer_representations/</link>
+      <pubDate>Mon, 30 Apr 2018 00:00:00 +0000</pubDate>
+      <author>codeattempts@gmail.com</author>
+      <guid>https://ghlecl.github.io/posts/integer_representations/</guid>
+      <description>Integer binary representations I had never had to look closely at integer binary representations in computers. The mental model I had for them was not wrong, but it turns out it was sub-optimal and there are better ways to do things. If you use high level abstractions and do not mainly work with fundamental types, or if you do not convert between integer types, you do not have to be mindful of the binary representation of integers all the time as you program.</description>
+    </item>
     
-      
-      <item>
-        <title>Using a theme with Hugo</title>
-        <link>https://ghlecl.github.io/posts/hugo_theme/</link>
-        <pubDate>Thu, 05 Jan 2017 00:00:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
-        <guid>https://ghlecl.github.io/posts/hugo_theme/</guid>
-        <description>
-
-&lt;h1 id=&#34;hugo-themes&#34;&gt;Hugo themes&lt;/h1&gt;
-
-&lt;p&gt;Initially, I had two objectives for this blog.  One was to have a place where I could write some notes on programming for myself so that I could find them when I needed them.  The other was to learn a bit more about the web.&lt;/p&gt;
-
-&lt;p&gt;I thought (naively, granted) I could write it all myself using a static site generator.  I wanted to write the HTML, the CSS, the JavaScript, everything!  I thought it would not be too difficult using the templating engine of the static site generator and a front end development framework (&lt;a href=&#34;http://foundation.zurb.com/&#34; target=&#34;_blank&#34;&gt;Zurb Foundation&lt;/a&gt; was my initial choice).  Turns out I was both right and wrong.&lt;/p&gt;
-
-&lt;p&gt;Using the static site generator and a CSS/front end framework, I was able to get a basic site working with little previous knowledge of CSS and HTML.  My background is actually physics and so web programming is something new to me.  Took me a few nights, but it was up and running in a reasonable amount of time (for me).  Unfortunately, it turns out it was not as easy/quick as I had hoped to set it up, let alone customize the site.  I quickly found myself spending more and more time on the &amp;ldquo;mechanics&amp;rdquo; of the site and barely any time at all writing my programming notes.&lt;/p&gt;
-
-&lt;p&gt;As I said, I was both right and wrong: you can make a site form scratch without too much difficulty using the static site generator and a web framework, but it still takes a fair amount of time, time which I found out I was not willing to spend.  So I set out to explore &lt;a href=&#34;https://gohugo.io/&#34; target=&#34;_blank&#34;&gt;Hugo&amp;rsquo;s&lt;/a&gt; theming mechanism and the &lt;a href=&#34;http://themes.gohugo.io/&#34; target=&#34;_blank&#34;&gt;available themes&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;I considered quite a few of them.  I was looking for something simple and did not have that many requirements (I think).  I really wanted to have pagination and, if possible, search and &lt;a href=&#34;https://disqus.com/&#34; target=&#34;_blank&#34;&gt;Disqus&lt;/a&gt; integration (the latter two I ended up dropping).  I also did not want too many fonts and too many moving parts.  Ideally, it would not be too hard to customize the site/theme.  Analytics do not really interest me.  All and all, nothing too fancy.&lt;/p&gt;
-
-&lt;p&gt;At some point, I was interested in Google&amp;rsquo;s &lt;a href=&#34;https://material.io/&#34; target=&#34;_blank&#34;&gt;Material Design&lt;/a&gt; and so thought a theme using it might be nice.  Unfortunately, I could not find a material design based theme that was simple enough for me to customize (of course, others might disagree on that!).  Then I thought something using &lt;a href=&#34;http://webcomponents.org/&#34; target=&#34;_blank&#34;&gt;Web Components&lt;/a&gt; might be interesting so I looked into a theme using &lt;a href=&#34;https://www.polymer-project.org/1.0/&#34; target=&#34;_blank&#34;&gt;Polymer&lt;/a&gt;.  Again, nothing easy enough to customize for my skill level.  I think that is the point: anything interesting or new will take me too much time to work on and take me away from writing, which for me is the point of all this.&lt;/p&gt;
-
-&lt;p&gt;So in the end, I chose a theme that is out of the box really pleasing to me: &lt;a href=&#34;http://themes.gohugo.io/internet-weblog/&#34; target=&#34;_blank&#34;&gt;Internet Weblog&lt;/a&gt; by &lt;a href=&#34;http://jnjosh.com/&#34; target=&#34;_blank&#34;&gt;Josh Johnson&lt;/a&gt;.  Really nice theme which is, at least up till now, easy enough to customize to my needs.  The only thing I have had trouble with is the fact that the theme was written for an older Hugo version and some template syntax (mainly capitalization of variable names) was not portable to the current version (0.18 when writing this).  I was able to fairly quickly make the necessary changes to the theme and allow it to run on the version of Hugo I am using.&lt;/p&gt;
-
-&lt;p&gt;In the future, I might look into creating a search box for the site.  Currently, this blog does not hold that many posts, but the theme comes with the idea/concept of microposts which I really like.  Microposts actually serve my purpose of programming notes even better than full posts, I think.  Often, I solve a small problem in a particular way and I would like to remember my solution without writing a full blog post about it (usually because it does not warrant that).  Writing a small 1-2 paragraph micropost to remember the solution would be perfect.  The problem is if too many of those pile up, then you can&amp;rsquo;t find them easily anymore.  So a search box for the site would be nice.  At least that&amp;rsquo;s what I think right now.&lt;/p&gt;
-
-&lt;p&gt;As for Disqus integration, I thought it might be interesting to discuss (no pun intended) the more technical posts I write here with people, but it&amp;rsquo;s really a low priority.  I usually take things to heart a little too much and the internet is the best place to be told you are dumb in a very &amp;ldquo;nonconstructive&amp;rdquo; manner.  Those two probably don&amp;rsquo;t mix well and so not opening my posts for comments might be a better idea for me.  Who knows what the future holds.&lt;/p&gt;
-
-&lt;p&gt;This means that the information about my &lt;a href=&#34;https://ghlecl.github.io/posts/hugo/&#34; target=&#34;_blank&#34;&gt;initial Hugo setup&lt;/a&gt; is already out of date and invalid.  I might try and write a post (micropost?) about the new setup in the near future, but basically, I mostly use default values and a theme.&lt;/p&gt;
-
-&lt;p&gt;So now that I have a theme that I like for the site, I can start posting a bit more often (hopefully).&lt;/p&gt;
-</description>
-      </item>
-      
+    <item>
+      <title>Return type overloading</title>
+      <link>https://ghlecl.github.io/posts/return_type_overload/</link>
+      <pubDate>Thu, 12 Oct 2017 00:00:00 +0000</pubDate>
+      <author>codeattempts@gmail.com</author>
+      <guid>https://ghlecl.github.io/posts/return_type_overload/</guid>
+      <description>No return type overloading In C++, return type does not participate in function overload resolution, i.e. it is not possible to overload a function on the return type. Thus, this is not legal C++:
+void to_lower( std::string&amp;amp; strg ); std::string to_lower( std::string&amp;amp; strg );  The compiler will issue an error when it sees the second declaration.[1] For instance, the error Clang emits is the following: &amp;ldquo;error: functions that differ only in their return type cannot be overloaded&amp;rdquo;.</description>
+    </item>
     
-      
-      <item>
-        <title>Timing pieces of code</title>
-        <link>https://ghlecl.github.io/posts/cxx_time_it/</link>
-        <pubDate>Sun, 20 Mar 2016 00:00:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
-        <guid>https://ghlecl.github.io/posts/cxx_time_it/</guid>
-        <description>
-
-&lt;h1 id=&#34;execution-time-measurements&#34;&gt;Execution time measurements&lt;/h1&gt;
-
-&lt;h3 id=&#34;python-s-timeit-and-repeat&#34;&gt;Python&amp;rsquo;s timeit and repeat&lt;/h3&gt;
-
-&lt;p&gt;I sometimes want to time my code to see which version of a function I wrote runs faster.  I know that you should &lt;em&gt;&lt;strong&gt;always&lt;/strong&gt;&lt;/em&gt; profile before you optimize and that &lt;a href=&#34;https://en.wikipedia.org/wiki/Benchmark_%28computing%29#Types_of_benchmarks&#34; target=&#34;_blank&#34;&gt;micro-benchmarking&lt;/a&gt; has &lt;a href=&#34;http://stackoverflow.com/a/2842707&#34; target=&#34;_blank&#34;&gt;lots of caveats&lt;/a&gt; (some of which I have myself fallen victim to), but still, sometimes, curiosity gets the best of me and I just have to know.  When I am writing in Python, I use the &lt;code&gt;timeit&lt;/code&gt; &lt;a href=&#34;https://docs.python.org/3/library/timeit.html?highlight=timeit#module-timeit&#34; target=&#34;_blank&#34;&gt;module&lt;/a&gt; to measure code execution.  This handy module has two main utility functions: &lt;code&gt;timeit&lt;/code&gt; and &lt;code&gt;repeat&lt;/code&gt;.&lt;/p&gt;
-
-&lt;p&gt;&lt;code&gt;timeit&lt;/code&gt; will run a piece of code &lt;code&gt;n&lt;/code&gt; times while measuring the execution time of each repetition.  It then gives back the lowest time, which is arguably the time needed to run the code when nothing else on the system is interfering.  Of course, when the code will be run, other things will want CPU time alongside your program and the OS will have to balance it all, but &lt;em&gt;usually&lt;/em&gt;, that should not be taken into account when doing micro-benchmarks.&lt;/p&gt;
-
-&lt;p&gt;&lt;code&gt;repeat&lt;/code&gt; will again run a piece of code &lt;code&gt;n&lt;/code&gt; times, but will repeat that experiment &lt;code&gt;r&lt;/code&gt; times, returning a list with the lowest execution time of each repetition of the experiment.  The following snippet shows how to use both of them in code.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;from timeit import timeit, repeat
-
-n = 1000
-r = 2
-times_repeat = repeat( &amp;quot;def Fn( x ): return x**2;myFn( 4 )&amp;quot;, repeat = r, number = n )
-times_timeit = []
-for idx in range( r ):
-    times_timeit.append( timeit( &amp;quot;def Fn( x ): return x**2;myFn( 4 )&amp;quot;, number = n ) )
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;There are two other ways to use the &lt;code&gt;timeit&lt;/code&gt; module, namely via the command line with the executable module syntax and using an interactive Python shell like &lt;a href=&#34;https://ipython.org/&#34; target=&#34;_blank&#34;&gt;iPython&lt;/a&gt; which has the magic function &lt;code&gt;%timeit&lt;/code&gt;.  I won&amp;rsquo;t cover those subjects here.&lt;/p&gt;
-
-&lt;h3 id=&#34;trying-it-out-in-c-time-it&#34;&gt;Trying it out in C++ : time_it&lt;/h3&gt;
-
-&lt;p&gt;The thing is, I don&amp;rsquo;t always do things in Python and I wanted to have a function similar to &lt;code&gt;timeit&lt;/code&gt; which would allow me to measure the execution time of a function or piece of code in C++.  It turns out that with C++14 (don&amp;rsquo;t know if C++11 is sufficient, but C++17/C++1z will make it easier I think), it is possible to get close to it.  When I got the idea, I started to think about the &lt;a href=&#34;http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4169.html&#34; target=&#34;_blank&#34;&gt;proposed&lt;/a&gt; &lt;code&gt;std::invoke&lt;/code&gt; function that should (or has?) make it into the next standard.  This function template takes a function, it&amp;rsquo;s arguments and invokes it.  This is pretty close to what I need.  Coupling the facilities of &lt;code&gt;std::chrono&lt;/code&gt; with that function could actually get me pretty close to what I want.  Because some compilers do not yet have an implementation of &lt;code&gt;std::invoke&lt;/code&gt;, I had to first find one or write one.  I decided to use the implementation found on &lt;a href=&#34;http://en.cppreference.com/w/cpp/utility/functional/invoke&#34; target=&#34;_blank&#34;&gt;cppreference.com&lt;/a&gt;.  But let&amp;rsquo;s pretend that std::invoke is available.  Then, one can write the function template &lt;code&gt;time_it&lt;/code&gt;&lt;sup&gt;[1]&lt;/sup&gt; using &lt;code&gt;std::invoke&lt;/code&gt; and &lt;code&gt;std::chrono&lt;/code&gt;.  This is the resulting function for those who do not want to read the steps I went through:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;template&amp;lt;
-   unsigned int repeat_invoke = 1000,
-   unsigned int repeat_meas = 3,
-   typename F, typename... ArgTypes
-        &amp;gt;
-std::array&amp;lt; double, repeat_meas &amp;gt;
-time_it( F&amp;amp;&amp;amp; f, ArgTypes&amp;amp;&amp;amp;... args )
-{
-   using std::chrono::high_resolution_clock;
-   using std::chrono::duration_cast;
-   using std::numeric_limits;
-   using std::chrono::nanoseconds;
-
-   static_assert( repeat_invoke &amp;gt;= 1,
-            &amp;quot;time_it: The number of times the code experiment is \
-                                          repeated has to be at least 1.&amp;quot; );
-   static_assert( repeat_meas &amp;gt;= 1,
-            &amp;quot;time_it: The number of times the code is run has to \
-                                                          be at least 1.&amp;quot; );
-
-   double max_dbl = numeric_limits&amp;lt;double&amp;gt;::max();
-   double cur_min = max_dbl;
-   std::array&amp;lt; double, repeat_meas &amp;gt; shortest_times;
-   for( unsigned int meas_idx( 0 ); meas_idx != repeat_meas; ++meas_idx )
-   {
-      for( unsigned int invoke_idx( 0 ); invoke_idx != repeat_invoke; ++invoke_idx )
-      {
-         auto start = high_resolution_clock::now();
-
-         std::invoke( std::forward&amp;lt;F&amp;gt;(f), std::forward&amp;lt;ArgTypes&amp;gt;(args)... );
-
-         auto elapsed = duration_cast&amp;lt; nanoseconds &amp;gt;(
-                        high_resolution_clock::now() - start ).count();
-
-         if( elapsed &amp;lt; cur_min ) { cur_min = elapsed; }
-      }
-      shortest_times[meas_idx] = cur_min;
-      cur_min = max_dbl;
-   }
-
-   return shortest_times;
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;I skipped the includes in this code snippet.  I am not pretending this code is exception safe, thread safe or any other kind of safe there is.  I am not suggesting anybody else should use it.  It&amp;rsquo;s simply something I find useful.&lt;/p&gt;
-
-&lt;h3 id=&#34;how-i-got-there&#34;&gt;How I got there&lt;/h3&gt;
-
-&lt;p&gt;Basically, aside from the boiler plate stuff, the function is one that takes another function and its parameters as input, and then outputs the minimum time taken to execute the code.  The initial declaration could be written as follows:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;template&amp;lt; typename F, typename... ArgTypes &amp;gt;
-double time_it( F&amp;amp;&amp;amp; f, ArgTypes&amp;amp;&amp;amp;... args );
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;This definition uses variadic templates.  You can find information on variadic templates on &lt;a href=&#34;https://en.wikipedia.org/wiki/Variadic_template&#34; target=&#34;_blank&#34;&gt;various&lt;/a&gt; &lt;a href=&#34;http://en.cppreference.com/w/cpp/language/parameter_pack&#34; target=&#34;_blank&#34;&gt;sites&lt;/a&gt;.  The problem I had with that first iteration is that I could not specify the number of repetitions or the number of times I wanted to run the timing experiment (equivalent to the &lt;code&gt;n&lt;/code&gt; and &lt;code&gt;r&lt;/code&gt; parameters of Python&amp;rsquo;s &lt;code&gt;timeit&lt;/code&gt;).  I had to find a way to do that which would allow for default values as well, since I did not want to specify those arguments every time I call the function.  To be able to use default values in C++, the defaulted parameters have to be last (no keyword arguments in C++ land).  That presented a problem because I also have to have a parameter pack.  So to work around that, I introduced two defaulted template arguments like this:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;template&amp;lt;
-   unsigned int repeat_invoke = 1000,
-   unsigned int repeat_meas = 3,
-   typename F,
-   typename... ArgTypes
-        &amp;gt;
-std::array&amp;lt; double, repeat_meas &amp;gt;
-time_it( F&amp;amp;&amp;amp; f, ArgTypes&amp;amp;&amp;amp;... args );
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;Sorry for the reformatting of the template declaration.  I must admit I struggle to have a consistent formatting for templates.  I find nothing is completely satisfying.  I should probably just use &lt;a href=&#34;http://clang.llvm.org/docs/ClangFormat.html&#34; target=&#34;_blank&#34;&gt;Clang Format&lt;/a&gt;.  Anyhow, back to my function.  The addition of the two template arguments allowed me to change the return type to an array and I now have the functionality I want: I can specify, albeit as template parameters, the number of repetitions and the number of invocations at the call site.  All that was left to do was write the timing code, since the function invocation itself is simply:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;std::invoke( std::forward&amp;lt;F&amp;gt;(f), std::forward&amp;lt;ArgTypes&amp;gt;(args)... );
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;The use of &lt;code&gt;std::forward&lt;/code&gt; in the code here is for efficiency.  The timing code is based on &lt;code&gt;std::chrono::high_resolution_clock&lt;/code&gt;.  I chose to simply record the time before the invocation with &lt;code&gt;std::chrono::high_resolution_clock::now()&lt;/code&gt; and do the same after.  The difference is the elapsed time.  The choice of the clock could be discussed.  The most important thing is for the clock to be steady.&lt;/p&gt;
-
-&lt;h3 id=&#34;example-test&#34;&gt;Example / test&lt;/h3&gt;
-
-&lt;p&gt;I have written a function which will make the current thread sleep for ten milliseconds.  Then, I have used my new &lt;code&gt;time_it&lt;/code&gt; function to time the execution of the defined function.  The code is reproduced here and actually serves as a usage example.  There are also two calls with a lambda function, one taking arguments.&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;void my_fn()
-{
-   using namespace std::chrono_literals;
-   std::this_thread::sleep_for( 10ms );
-}
-
-int main( int argc, char* argv[] )
-{
-   // get times
-   auto test_val_0 = time_it( my_fn );
-   auto test_val_1 = time_it&amp;lt; 100, 6 &amp;gt;( my_fn );
-   auto test_val_2 = time_it&amp;lt; 500 &amp;gt;( my_fn );
-   auto test_val_3 = time_it&amp;lt; 1000, 2 &amp;gt;( my_fn );
-   auto test_val_4 = time_it&amp;lt; 1000, 8 &amp;gt;( [](){
-            using namespace std::chrono_literals;
-            std::this_thread::sleep_for( 5ms );
-         } );
-   auto test_val_5 = time_it&amp;lt; 1000, 3 &amp;gt;( []( int lt, int rt ){
-            return lt - rt;
-         }, 5, 7 );
-
-   // output results
-   std::cout &amp;lt;&amp;lt; &amp;quot;exp 0: [ &amp;quot; &amp;lt;&amp;lt; test_val_0[0] / 1000000.0
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_0[1] / 1000000.0
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_0[2] / 1000000.0 &amp;lt;&amp;lt; &amp;quot; ]\n&amp;quot;;
-   std::cout &amp;lt;&amp;lt; &amp;quot;exp 1: [ &amp;quot; &amp;lt;&amp;lt; test_val_1[0] / 1000000.0
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_1[1] / 1000000.0
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_1[2] / 1000000.0
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_1[3] / 1000000.0
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_1[4] / 1000000.0
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_1[5] / 1000000.0 &amp;lt;&amp;lt; &amp;quot; ]\n&amp;quot;;
-   std::cout &amp;lt;&amp;lt; &amp;quot;exp 2: [ &amp;quot; &amp;lt;&amp;lt; test_val_2[0] / 1000000.0
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_2[1] / 1000000.0
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_2[2] / 1000000.0 &amp;lt;&amp;lt; &amp;quot; ]\n&amp;quot;;
-   std::cout &amp;lt;&amp;lt; &amp;quot;exp 3: [ &amp;quot; &amp;lt;&amp;lt; test_val_3[0] / 1000000.0
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_3[1] / 1000000.0 &amp;lt;&amp;lt; &amp;quot; ]\n&amp;quot;;
-   std::cout &amp;lt;&amp;lt; &amp;quot;exp 4: [ &amp;quot; &amp;lt;&amp;lt; test_val_4[0] / 1000000.0
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_4[1] / 1000000.0
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_4[2] / 1000000.0
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_4[3] / 1000000.0
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_4[4] / 1000000.0
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_4[5] / 1000000.0
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_4[6] / 1000000.0
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_4[7] / 1000000.0 &amp;lt;&amp;lt; &amp;quot; ]\n&amp;quot;;
-   std::cout &amp;lt;&amp;lt; &amp;quot;exp 5: [ &amp;quot; &amp;lt;&amp;lt; test_val_5[0]
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_5[1]
-             &amp;lt;&amp;lt; &amp;quot;, &amp;quot; &amp;lt;&amp;lt;  test_val_5[2] &amp;lt;&amp;lt; &amp;quot; ]\n&amp;quot;;
-   return 0;
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;and the output on my machine is:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;exp 0: [ 10.0203, 10.0184, 10.0266 ]
-exp 1: [ 10.0465, 10.0373, 10.0241, 10.0198, 10.0214, 10.0243 ]
-exp 2: [ 10.0152, 10.0176, 10.0305 ]
-exp 3: [ 10.02, 10.0174 ]
-exp 4: [ 5.01679, 5.01788, 5.01327, 5.01883, 5.02777, 5.02198, 5.01831, 5.01463 ]
-exp 5: [ 55, 55, 55 ]
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;which, for the four first cases, is slightly more than 10ms and is what was expected.  The expected value for the experiment labeled 4 is slightly higher than 5ms and for the last lambda, it should be in the nanoseconds range, which it is.  Of course, the constant value is suspicious and probably means the actual value is actually lower, but the &lt;code&gt;time_it&lt;/code&gt; overhead and the clock precision is so that nothing below the 55ns value can be measured on my machine.  I have not determined the error bar on the time measurement.  This is a complex subject and much more work would be needed to test for that.  One other thing I have not tried in this example is the timing of a member function, but it should work.&lt;/p&gt;
-
-&lt;h3 id=&#34;what-is-impossible&#34;&gt;What is impossible&lt;/h3&gt;
-
-&lt;p&gt;There are things I have found are not possible with the function as it stands.  One of them is the inability to pass &lt;code&gt;time_it&lt;/code&gt; a template function as an argument without specifying the template arguments of the passed in (or timed) function.  I might be wrong, but I have not found a way to do that.  Explicit argument passing is tedious and so &lt;code&gt;time_it&lt;/code&gt; might not be very useful in those cases.&lt;/p&gt;
-
-&lt;p&gt;One other capability Python&amp;rsquo;s &lt;code&gt;timeit&lt;/code&gt; has that this one does not is the ability to accept setup code which is executed before the experiment is run.  I am not sure how useful that would be in the context of C++.  Of course, I can&amp;rsquo;t imagine what others would use &lt;code&gt;time_it&lt;/code&gt; for, so it might be useful even though I can&amp;rsquo;t see it, but I am not writing the STL!  It&amp;rsquo;s just that in my view, since C++ is compiled and not interpreted, &lt;code&gt;time_it&lt;/code&gt; will still require a main function and an executable to run, unlike Python&amp;rsquo;s &lt;code&gt;timeit&lt;/code&gt; which can be run on the fly from the command line to test something out.  To my mind, the setup code can then be written in the main function to no real cost compared to having it done in the &lt;code&gt;time_it&lt;/code&gt; function.  That being said, I believe it would be possible to accept a setup function by making the input of &lt;code&gt;time_it&lt;/code&gt; two tuples of function and arguments, the first being the function to test and the second being the setup function.  I am just not 100% certain that it would be useful and I cannot say for sure that it can be done because I have not tried implementing it.  In my opinion, it would make calling the function without setup code much uglier.  Maybe an overload taking two tuples and the current version could live together and that would allow the functionality at &amp;ldquo;no cost&amp;rdquo;.&lt;/p&gt;
-
-&lt;p&gt;Anyhow, those are my thoughts on the matter for now.&lt;/p&gt;
-
-&lt;h3 id=&#34;notes&#34;&gt;Notes&lt;/h3&gt;
-
-&lt;p&gt;&lt;sup&gt;[1]&lt;/sup&gt; I chose the name with an underscore to differentiate the function from its Python counterpart since my version does not do &lt;em&gt;exactly&lt;/em&gt; all the stuff the python version can!&lt;/p&gt;
-</description>
-      </item>
-      
+    <item>
+      <title>rvalue references in C&#43;&#43;</title>
+      <link>https://ghlecl.github.io/posts/learning_rvalues/</link>
+      <pubDate>Tue, 10 Jan 2017 00:00:00 +0000</pubDate>
+      <author>codeattempts@gmail.com</author>
+      <guid>https://ghlecl.github.io/posts/learning_rvalues/</guid>
+      <description>move, rvalues, forward and C++ Ever since I heard about it, the concept of move semantics has been intriguing and appealing to me. I confess to liking new C++ things and micro-optimizations way too much&amp;hellip; but still, the concept of &amp;ldquo;moving&amp;rdquo; memory instead of copying it in order to gain efficiency is at least worth exploring, right? Anyhow, I chose a function of mine and decided to try and make it handle move semantics properly.</description>
+    </item>
     
-      
-      <item>
-        <title>My Hugo Setup</title>
-        <link>https://ghlecl.github.io/posts/hugo/</link>
-        <pubDate>Sun, 14 Feb 2016 00:00:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
-        <guid>https://ghlecl.github.io/posts/hugo/</guid>
-        <description>
-
-&lt;h1 id=&#34;hugo&#34;&gt;Hugo&lt;/h1&gt;
-
-&lt;p&gt;I have decided to go with &lt;a href=&#34;https://gohugo.io/&#34; target=&#34;_blank&#34;&gt;Hugo&lt;/a&gt; and &lt;a href=&#34;https://pages.github.com/&#34; target=&#34;_blank&#34;&gt;Github Pages&lt;/a&gt; for this note taking blog.  This is simply me describing my setup with Hugo and explaining what I have been able to accomplish to this point.  It is not much, but writing it down helps me clarify my thoughts and insures I don&amp;rsquo;t have to figure it out again (which, ironically, I had to do to write and post this entry!).&lt;/p&gt;
-
-&lt;h3 id=&#34;static-site-generation-via-hugo&#34;&gt;Static site generation via Hugo&lt;/h3&gt;
-
-&lt;p&gt;Basically, in Hugo (as in many &lt;a href=&#34;https://www.staticgen.com/&#34; target=&#34;_blank&#34;&gt;static site generators&lt;/a&gt;), the idea is to write content in files with a given format (often &lt;a href=&#34;https://daringfireball.net/projects/markdown/&#34; target=&#34;_blank&#34;&gt;markdown&lt;/a&gt;) and specify how to build a website out of this content via template/layout files.  Once you run the executable (literally &lt;code&gt;hugo&lt;/code&gt;) on the directory structure containing all those content and layout files, a static website is generated.  To mark a file as a content file, you put a YAML or TOML header at the beginning of the file.  Some information in the header is required by Hugo, some is optional and some is custom.&lt;/p&gt;
-
-&lt;h3 id=&#34;the-setup&#34;&gt;The setup&lt;/h3&gt;
-
-&lt;p&gt;The executable must know where to look for content and layouts/templates.  It also has to have access to styling elements (CSS and images for instance).  It has default locations where it looks for all those files and pre-supposes a few names, but most of it is configurable.  Here is what I used:&lt;/p&gt;
-
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;Parameter&lt;/th&gt;
-&lt;th&gt;Value&lt;/th&gt;
-&lt;th align=&#34;center&#34;&gt;Kept default ?&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;base URL&lt;/td&gt;
-&lt;td&gt;&lt;code&gt;http://ghlecl.github.io/&lt;/code&gt;&lt;/td&gt;
-&lt;td align=&#34;center&#34;&gt;n/a&lt;/td&gt;
-&lt;/tr&gt;
-
-&lt;tr&gt;
-&lt;td&gt;contentdir&lt;/td&gt;
-&lt;td&gt;&lt;code&gt;content&lt;/code&gt;&lt;/td&gt;
-&lt;td align=&#34;center&#34;&gt;y&lt;/td&gt;
-&lt;/tr&gt;
-
-&lt;tr&gt;
-&lt;td&gt;layoutdir&lt;/td&gt;
-&lt;td&gt;&lt;code&gt;templates&lt;/code&gt;&lt;/td&gt;
-&lt;td align=&#34;center&#34;&gt;n&lt;/td&gt;
-&lt;/tr&gt;
-
-&lt;tr&gt;
-&lt;td&gt;publishDir&lt;/td&gt;
-&lt;td&gt;&lt;code&gt;public&lt;/code&gt;&lt;/td&gt;
-&lt;td align=&#34;center&#34;&gt;y&lt;/td&gt;
-&lt;/tr&gt;
-
-&lt;tr&gt;
-&lt;td&gt;dataDir&lt;/td&gt;
-&lt;td&gt;&lt;code&gt;data&lt;/code&gt;&lt;/td&gt;
-&lt;td align=&#34;center&#34;&gt;y&lt;/td&gt;
-&lt;/tr&gt;
-
-&lt;tr&gt;
-&lt;td&gt;publishdir&lt;/td&gt;
-&lt;td&gt;&lt;code&gt;public&lt;/code&gt;&lt;/td&gt;
-&lt;td align=&#34;center&#34;&gt;y&lt;/td&gt;
-&lt;/tr&gt;
-
-&lt;tr&gt;
-&lt;td&gt;staticdir&lt;/td&gt;
-&lt;td&gt;&lt;code&gt;static&lt;/code&gt;&lt;/td&gt;
-&lt;td align=&#34;center&#34;&gt;y&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
-&lt;p&gt;Unfortunately, capitalization matters and is not consistent.  All the variables available can be &lt;a href=&#34;https://gohugo.io/overview/configuration/&#34; target=&#34;_blank&#34;&gt;found&lt;/a&gt; on the Hugo site.&lt;/p&gt;
-
-&lt;h3 id=&#34;versioning-and-publishing&#34;&gt;Versioning and publishing&lt;/h3&gt;
-
-&lt;p&gt;To keep versions of all my posts and the site, I will be using &lt;a href=&#34;https://git-scm.com/&#34; target=&#34;_blank&#34;&gt;Git&lt;/a&gt; as my version control software, unsurprisingly as I am publishing on Github Pages.  I have made a setup inspired by the &lt;a href=&#34;https://gohugo.io/tutorials/github-pages-blog/&#34; target=&#34;_blank&#34;&gt;tutorial&lt;/a&gt;, but not exactly as they suggest.&lt;/p&gt;
-
-&lt;p&gt;I actually want to keep my drafts private.  If I decide to commit drafts to the version control in order to work on ideas, I do not want all those draft versions with typos, bad sentences, bad ideas and brainstorming to be seen by everyone.  A private Git repository is needed for that and since I have not yet decided to pay for a private Github account, I cannot have a private repository on that site.  To get a private repository, I have chosen to use &lt;a href=&#34;https://bitbucket.org/&#34; target=&#34;_blank&#34;&gt;Bitbucket&lt;/a&gt;.  With that provider, I can get 5 private repositories for free.  Thus, I have a private Git repository for my site.  This is also where I keep my template code and everything that Hugo needs to create the site.  I do not version the public directory in that repository.  To insure that, it is added to the .gitignore file.&lt;/p&gt;
-
-&lt;p&gt;Actually, were it not for the fact that the way Github Pages work is to publish the master branch of a repository, I would not need another repository.  I would simply version the raw materials Hugo needs and I would replace the public content on the public server knowing that I can regenerate a version whenever I want for the foreseeable future.  That being said, I cannot do that because Github pages actually simply serves the last commit of master on your personal page (username.github.io) or the latest commit of the gh-pages branch for a project page.  In any case, I need a repository with at least one commit.  Whenever I want to publish the site, I make a commit in the development git repository and tag it as a site release with the date.  Then, I delete everything inside the public directory except the .git folder and regenerate the site with Hugo.  Any content that is not set to draft gets generated.  After that, I &lt;code&gt;cd&lt;/code&gt; into the public folder (the public git repository), make a commit and push.  Voilà, the site is updated.&lt;/p&gt;
-
-&lt;p&gt;I cannot predict what problems I&amp;rsquo;ll have with this setup, but for now, it seems fine and so I&amp;rsquo;ll run with it.  I&amp;rsquo;ll write another post later if I have to make changes.&lt;/p&gt;
-</description>
-      </item>
-      
+    <item>
+      <title>Using a theme with Hugo</title>
+      <link>https://ghlecl.github.io/posts/hugo_theme/</link>
+      <pubDate>Thu, 05 Jan 2017 00:00:00 +0000</pubDate>
+      <author>codeattempts@gmail.com</author>
+      <guid>https://ghlecl.github.io/posts/hugo_theme/</guid>
+      <description>Hugo themes Initially, I had two objectives for this blog. One was to have a place where I could write some notes on programming for myself so that I could find them when I needed them. The other was to learn a bit more about the web.
+I thought (naively, granted) I could write it all myself using a static site generator. I wanted to write the HTML, the CSS, the JavaScript, everything!</description>
+    </item>
     
-      
-      <item>
-        <title>Static Site</title>
-        <link>https://ghlecl.github.io/posts/staticsite/</link>
-        <pubDate>Tue, 29 Dec 2015 00:00:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
-        <guid>https://ghlecl.github.io/posts/staticsite/</guid>
-        <description>
-
-&lt;h1 id=&#34;hugo&#34;&gt;Hugo&lt;/h1&gt;
-
-&lt;p&gt;In a &lt;a href=&#34;https://ghlecl.github.io/posts/githubpages/&#34; target=&#34;_blank&#34;&gt;previous&lt;/a&gt; entry, I described how I got to using &lt;a href=&#34;https://pages.github.com/&#34; target=&#34;_blank&#34;&gt;GitHub Pages&lt;/a&gt;.  That was one of the (if not the) first question I had to figure out when I decided to write my notes in an Internet format (ok, blog, but I don&amp;rsquo;t see myself as a blogger).  The second thing I had to figure out was what to use as a writing tool.  I could simply write static HTML by hand and leave it at that (actually, if you stumbled upon this website before I posted my first few posts, I left a Hello World page up for a few weeks/months while figuring all this out!).  I am trying to set the bar a little higher than that for myself.&lt;/p&gt;
-
-&lt;p&gt;For work, I have been playing with &lt;a href=&#34;https://www.djangoproject.com&#34; target=&#34;_blank&#34;&gt;Django&lt;/a&gt; and at some point, I thought I could write something in Django or use a Django CMS, but since GitHub Pages only serve static content, I had to abandon that plan.  I could have done static HTML with some CSS framework like &lt;a href=&#34;http://getbootstrap.com&#34; target=&#34;_blank&#34;&gt;Bootstrap&lt;/a&gt; or &lt;a href=&#34;http://foundation.zurb.com&#34; target=&#34;_blank&#34;&gt;Foundation&lt;/a&gt;.  Actually, that is how I started to write all of this, but then, the same friend of mine that pointed me in the direction of GitHub Pages, also reminded me that they suggest a workflow with &lt;a href=&#34;http://jekyllrb.com&#34; target=&#34;_blank&#34;&gt;Jekyll&lt;/a&gt;.  Trying to get information about that, I learned that Jekyll is what is called a static site generator and that there are quite a few &lt;a href=&#34;https://www.staticgen.com/&#34; target=&#34;_blank&#34;&gt;alternatives&lt;/a&gt; out there.  Looking at a few of the alternatives, I decided to go with &lt;a href=&#34;https://gohugo.io/&#34; target=&#34;_blank&#34;&gt;Hugo&lt;/a&gt; (no pun intended), originally written by &lt;a href=&#34;https://github.com/spf13&#34; target=&#34;_blank&#34;&gt;Steve Francia&lt;/a&gt;.  I can&amp;rsquo;t claim to have researched the subject extensively, but Hugo seemed like it was configurable enough for my needs/tastes, fast enough and easy enough.&lt;/p&gt;
-
-&lt;p&gt;Basically, the idea of a static site generator is to &amp;ldquo;build&amp;rdquo; a website telling a build system (I like to think of it as a compiler) how to construct each individual page using templates.  Then, all you do is generate new (mostly) unformatted content and ask the generator to rebuild the site.  This will update everything and include the new content.  As it constructs these pages, the build system will make a list of the entries and collect bits and pieces of informations which it will make available to you via a templating language (Hugo being written in &lt;a href=&#34;https://golang.org/&#34; target=&#34;_blank&#34;&gt;Go&lt;/a&gt;, it uses Go&amp;rsquo;s templating language).  You will be able to access that information more or less easily depending on the templating language and insert it in your templates.  For instance, to create a page listing all the posts of the site, you could, in the template, loop through the list of posts and add each of them in a &lt;code&gt;&amp;lt;ul&amp;gt;&lt;/code&gt; element.  As another example, you can get the title of the post in the template so that when designing the page, you can style that title as you please.  For instance:&lt;/p&gt;
-
-&lt;pre&gt;&lt;code class=&#34;language-html&#34;&gt;&amp;lt;h2 style=&amp;quot;bad idea, use CSS !&amp;quot;&amp;gt; $.Page.Title &amp;lt;/h2&amp;gt;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;I am not suggesting it is a good practice to style that way (as mentioned in the example), but it illustrates my point about the variables.  In the templates, you can also include JavaScript or any other kind of valid HTML you want.  You can therefore use a front-end CSS framework like &lt;a href=&#34;http://zurb.com/&#34; target=&#34;_blank&#34;&gt;Zurb&lt;/a&gt; Foundation or &lt;a href=&#34;https://twitter.com/&#34; target=&#34;_blank&#34;&gt;Twitter&lt;/a&gt; Bootstrap.&lt;/p&gt;
-
-&lt;p&gt;Alright, this is how I got to Hugo.  I will stop here and start a new post on my setup.  The next post will mark my first post that will actually be what I want for this little site: notes for me on how I did things.  It really is necessary.  Since writing the previous post, I have not done anything involving Hugo and already, I can&amp;rsquo;t really remember the organization of all of this.  Hopefully, taking notes will help.&lt;/p&gt;
-</description>
-      </item>
-      
+    <item>
+      <title>Timing pieces of code</title>
+      <link>https://ghlecl.github.io/posts/cxx_time_it/</link>
+      <pubDate>Sun, 20 Mar 2016 00:00:00 +0000</pubDate>
+      <author>codeattempts@gmail.com</author>
+      <guid>https://ghlecl.github.io/posts/cxx_time_it/</guid>
+      <description>Execution time measurements Python&amp;rsquo;s timeit and repeat I sometimes want to time my code to see which version of a function I wrote runs faster. I know that you should always profile before you optimize and that micro-benchmarking has lots of caveats (some of which I have myself fallen victim to), but still, sometimes, curiosity gets the best of me and I just have to know. When I am writing in Python, I use the timeit module to measure code execution.</description>
+    </item>
     
-      
-      <item>
-        <title>GitHub Pages</title>
-        <link>https://ghlecl.github.io/posts/githubpages/</link>
-        <pubDate>Mon, 23 Nov 2015 00:00:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
-        <guid>https://ghlecl.github.io/posts/githubpages/</guid>
-        <description>
-
-&lt;h1 id=&#34;github-pages&#34;&gt;GitHub Pages&lt;/h1&gt;
-
-&lt;p&gt;This is one of my first posts.  I have been toying with the idea of this blog for quite some time now.  A flaw of mine: too much searching for the best solution, not enough implementing.  I end up doing things too late.  Anyhow, I digress.&lt;/p&gt;
-
-&lt;p&gt;One of the relevant questions when thinking of writing a blog is of course where to publish and what tool(s) to use.  At some point, I was thinking of hosting on an old computer of mine.  Played with the different servers (compiled &lt;a href=&#34;https://httpd.apache.org&#34; target=&#34;_blank&#34;&gt;Apache&lt;/a&gt;, &lt;a href=&#34;https://www.lighttpd.net&#34; target=&#34;_blank&#34;&gt;lighttpd&lt;/a&gt; and &lt;a href=&#34;https://www.nginx.com&#34; target=&#34;_blank&#34;&gt;Nginx&lt;/a&gt;).  Then, I realized all the time involved in maintaining my own server and changed my mind.  I did not want to deal with the security updates and the log checking (or the program checking the logs&amp;hellip;).  Not that I am naïve enough to think my content is worth hacking, but using my machine on a bot net or whatnot might be.&lt;/p&gt;
-
-&lt;p&gt;After that, I started looking into shared hosting.  That could have worked, I even paid for a few months, but did nothing productive.  Was still learning everything and for some reason (a friend of mine would say control issues, but who knows really !), I did not want to go with &lt;a href=&#34;https://wordpress.com/&#34; target=&#34;_blank&#34;&gt;WordPress&lt;/a&gt;, &lt;a href=&#34;https://www.joomla.org/&#34; target=&#34;_blank&#34;&gt;Joomla&lt;/a&gt; or another content management system.  That seemed like overkill for my needs and yes, I like to control things on my computer a little too much for my own good and I did not feel I could get control over those behemoths in a reasonable timeframe.  Most of the shared hosting I looked into (probably not exhaustive) seemed pre-configured for the CMS like systems, but not for other things and I found myself again trying to configure Apache on the shared host.&lt;/p&gt;
-
-&lt;p&gt;I gave up for a while.  I was busy with other things; but lately, I have been coming back to the idea of this blog.  Hence my looking into all those things again.  That&amp;rsquo;s when a very good friend of mine suggested I look into &lt;a href=&#34;https://pages.github.com/&#34; target=&#34;_blank&#34;&gt;GitHub Pages&lt;/a&gt;.  The idea is very interesting and if someone else is reading this, it means I actually went through with this.  I personally have two basic needs for a server: 1) writing a blog (and maybe a private section as a journal) and 2) hosting private projects on Git.  With GitHub Pages, I can actually easily create the blog and if I pay for a GitHub account, I believe I should be able to do the private journal and the Git hosting as well.  The monthly cost will be roughly the same as a hosted plan and I will have almost zero if not zero administration to do.&lt;/p&gt;
-
-&lt;p&gt;So that&amp;rsquo;s how I came to GitHub pages!  I am sure that since I am a novice at the Internet (well creating content other then on my Facebook account), there are some assumptions I have made that are wrong and my solution might be sub-optimal, but it works for me.&lt;/p&gt;
-
-&lt;p&gt;Now, let&amp;rsquo;s see if I can make a habit of writing.&lt;/p&gt;
-</description>
-      </item>
-      
+    <item>
+      <title>My Hugo Setup</title>
+      <link>https://ghlecl.github.io/posts/hugo/</link>
+      <pubDate>Sun, 14 Feb 2016 00:00:00 +0000</pubDate>
+      <author>codeattempts@gmail.com</author>
+      <guid>https://ghlecl.github.io/posts/hugo/</guid>
+      <description>Hugo I have decided to go with Hugo and Github Pages for this note taking blog. This is simply me describing my setup with Hugo and explaining what I have been able to accomplish to this point. It is not much, but writing it down helps me clarify my thoughts and insures I don&amp;rsquo;t have to figure it out again (which, ironically, I had to do to write and post this entry!</description>
+    </item>
+    
+    <item>
+      <title>Static Site</title>
+      <link>https://ghlecl.github.io/posts/static_site/</link>
+      <pubDate>Tue, 29 Dec 2015 00:00:00 +0000</pubDate>
+      <author>codeattempts@gmail.com</author>
+      <guid>https://ghlecl.github.io/posts/static_site/</guid>
+      <description>Hugo In a previous entry, I described how I got to using GitHub Pages. That was one of the (if not the) first question I had to figure out when I decided to write my notes in an Internet format (ok, blog, but I don&amp;rsquo;t see myself as a blogger). The second thing I had to figure out was what to use as a writing tool. I could simply write static HTML by hand and leave it at that (actually, if you stumbled upon this website before I posted my first few posts, I left a Hello World page up for a few weeks/months while figuring all this out!</description>
+    </item>
+    
+    <item>
+      <title>GitHub Pages</title>
+      <link>https://ghlecl.github.io/posts/github_pages/</link>
+      <pubDate>Mon, 23 Nov 2015 00:00:00 +0000</pubDate>
+      <author>codeattempts@gmail.com</author>
+      <guid>https://ghlecl.github.io/posts/github_pages/</guid>
+      <description>GitHub Pages This is one of my first posts. I have been toying with the idea of this blog for quite some time now. A flaw of mine: too much searching for the best solution, not enough implementing. I end up doing things too late. Anyhow, I digress.
+One of the relevant questions when thinking of writing a blog is of course where to publish and what tool(s) to use.</description>
+    </item>
     
   </channel>
 </rss>

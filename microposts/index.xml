@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-
     <title>@ghlecl’s Code Attempts - Microposts</title>
     <link>https://ghlecl.github.io/microposts/</link>
     <description>All entries in Microposts on Code Attempts</description>
@@ -13,10 +12,12 @@
     
       
       <item>
-        <title>Friends only class</title>
+      	
+          <title>Friends only class</title>
+        
         <link>https://ghlecl.github.io/microposts/friends_only_class/</link>
         <pubDate>Tue, 28 Nov 2017 13:30:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
+        <author>codeattempts@gmail.com - Ghyslain Leclerc</author>
         <guid>https://ghlecl.github.io/microposts/friends_only_class/</guid>
         <description>
 
@@ -53,10 +54,12 @@
     
       
       <item>
-        <title>Count chars in lines</title>
+      	
+          <title>Count chars in lines</title>
+        
         <link>https://ghlecl.github.io/microposts/count_chars_in_n_first_lines/</link>
         <pubDate>Wed, 22 Nov 2017 12:30:00 +0000</pubDate>
-        <author>codeattempts@gmail.com (Ghyslain Leclerc)</author>
+        <author>codeattempts@gmail.com - Ghyslain Leclerc</author>
         <guid>https://ghlecl.github.io/microposts/count_chars_in_n_first_lines/</guid>
         <description>
 
