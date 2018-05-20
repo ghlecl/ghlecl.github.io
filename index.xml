@@ -364,13 +364,21 @@ see if this is something they will pursue.&lt;/p&gt;
 
 &lt;h1 id=&#34;no-return-type-overloading&#34;&gt;No return type overloading&lt;/h1&gt;
 
-&lt;p&gt;In C++, return type does not participate in function overload resolution, i.e. it is not possible to overload a function on the return type.  Thus, this is not legal C++:&lt;/p&gt;
+&lt;p&gt;In C++, return type does not participate in function overload resolution, i.e. it
+is not possible to overload a function on the return type.  Thus, this is not
+legal C++:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;void to_lower( std::string&amp;amp; strg );
 std::string to_lower( std::string&amp;amp; strg );
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;The compiler will issue an error when it sees the second declaration.&lt;sup&gt;[1]&lt;/sup&gt;  For instance, the error Clang emits is the following: &amp;ldquo;error: functions that differ only in their return type cannot be overloaded&amp;rdquo;.  The detailed reasons for this rule are irrelevant in the current discussion: it is just a fact.  I believe it is partially due to C++ allowing you to ignore the return value of a function if you so choose.  Thus, even for a function returning an int, you can call it without using or even capturing the return value:&lt;/p&gt;
+&lt;p&gt;The compiler will issue an error when it sees the second declaration.&lt;sup&gt;[1]&lt;/sup&gt;
+For instance, the error Clang emits is the following: &amp;ldquo;error: functions that differ
+only in their return type cannot be overloaded&amp;rdquo;.  The detailed reasons for this
+rule are irrelevant in the current discussion: it is just a fact.  I believe it is
+partially due to C++ allowing you to ignore the return value of a function if you
+so choose.  Thus, even for a function returning an int, you can call it without
+using or even capturing the return value:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-C++&#34;&gt;int fn( int );
 
@@ -378,15 +386,31 @@ auto ret_val = fn( 5 );
 fn( 12 ); // legal call, simply drops the return value
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;In the example, if &lt;code&gt;fn&lt;/code&gt; were overloaded on return type only, how would the second call be disambiguated?  I am far from certain this is the only reason why, but it is convincing enough for me.&lt;/p&gt;
+&lt;p&gt;In the example, if &lt;code&gt;fn&lt;/code&gt; were overloaded on return type only, how would the second
+call be disambiguated?  I am far from certain this is the only reason why, but it
+is convincing enough for me.&lt;/p&gt;
 
-&lt;p&gt;Still, I really wanted to be able to have an &amp;ldquo;in place&amp;rdquo; and &amp;ldquo;not in place&amp;rdquo; version of the &lt;code&gt;to_lower&lt;/code&gt; function I wrote.  And, &lt;a href=&#34;https://twitter.com/secretGeek/status/7269997868&#34; target=&#34;_blank&#34;&gt;naming things is hard&lt;/a&gt;, so I did not want to have to change the name of the function.  Cheating a little bit, I have found a way to &lt;em&gt;simulate&lt;/em&gt; function overloading on return type or at least make it possible to have the same name for the two functions and (almost) only a differing return type.&lt;/p&gt;
+&lt;p&gt;Still, I really wanted to be able to have an &amp;ldquo;in place&amp;rdquo; and &amp;ldquo;not in place&amp;rdquo; version
+of the &lt;code&gt;to_lower&lt;/code&gt; function I wrote.  And,
+&lt;a href=&#34;https://twitter.com/secretGeek/status/7269997868&#34; target=&#34;_blank&#34;&gt;naming things is hard&lt;/a&gt;, so I did
+not want to have to change the name of the function.  Cheating a little bit, I have
+found a way to &lt;em&gt;simulate&lt;/em&gt; function overloading on return type or at least make it
+possible to have the same name for the two functions and (almost) only a differing
+return type.&lt;/p&gt;
 
-&lt;p&gt;With what I came up with, one of the two overloads becomes a template and must be called explicitly, so no ADL or overload resolution alone can help me and template argument deduction cannot be used either because the function parameter(s) do not depend on the template parameter.  After all, it is illegal to overload on return type in C++ and my technique does not imply changing the ISO C++ standard!&lt;/p&gt;
+&lt;p&gt;With what I came up with, one of the two overloads becomes a template and must be
+called explicitly, so no ADL or overload resolution alone can help me and template
+argument deduction cannot be used either because the function parameter(s) do not
+depend on the template parameter.  After all, it is illegal to overload on return
+type in C++ and my technique does not imply changing the ISO C++ standard!&lt;/p&gt;
 
 &lt;h3 id=&#34;how-i-cheated&#34;&gt;How I &lt;em&gt;cheated&lt;/em&gt;&lt;/h3&gt;
 
-&lt;p&gt;All I did is use a template parameter as a tag for one version of the function.  I created an empty struct as a tag and templated one of the versions (the one the tag corresponds to).  Then, when I want that version to be called, I explicitly select the templated version passing the tag as an explicitly specified template argument.  Here is a code sample to illustrate/explain better:&lt;/p&gt;
+&lt;p&gt;All I did is use a template parameter as a tag for one version of the function.
+I created an empty struct as a tag and templated one of the versions (the one the
+tag corresponds to).  Then, when I want that version to be called, I explicitly
+select the templated version passing the tag as an explicitly specified template
+argument.  Here is a code sample to illustrate/explain better:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-C++&#34;&gt;#include &amp;lt;type_traits&amp;gt;
 #include &amp;lt;string&amp;gt;
@@ -426,19 +450,53 @@ int main( int argc, char* argv[] )
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Users of the function are provided with the tag and can use it to call the &amp;ldquo;overload&amp;rdquo; (so to speak, not an actual overload, I know).  Compilers are actually pretty good at eliminating empty classes from the code, even at not too high optimization levels.  So I am confident that the tag should disappear completely from the resulting binary and there should be no runtime downside to this technique.&lt;sup&gt;[2]&lt;/sup&gt;  Also, if appropriate, one function can be implemented using the other.  To ensure that types other than the provided tag can&amp;rsquo;t be used for the function call, I put a &lt;code&gt;static_assert&lt;/code&gt; in the implementation.  Otherwise, any type could be put in there (as in &lt;code&gt;to_lower&amp;lt;int&amp;gt;&lt;/code&gt;), which although it would work, would not be as explicit and as clear.  I don&amp;rsquo;t know why anyone would want do that, but I forbid it explicitly in my implementation.&lt;/p&gt;
+&lt;p&gt;Users of the function are provided with the tag and can use it to call the
+&amp;ldquo;overload&amp;rdquo; (so to speak, not an actual overload, I know).  Compilers are actually
+pretty good at eliminating empty classes from the code, even at not too high
+optimization levels.  So I am confident that the tag should disappear completely
+from the resulting binary and there should be no runtime downside to this
+technique.&lt;sup&gt;[2]&lt;/sup&gt;  Also, if appropriate, one function can be implemented
+using the other.  To ensure that types other than the provided tag can&amp;rsquo;t be used
+for the function call, I put a &lt;code&gt;static_assert&lt;/code&gt; in the implementation.  Otherwise,
+any type could be put in there (as in &lt;code&gt;to_lower&amp;lt;int&amp;gt;&lt;/code&gt;), which although it would
+   work, would not be as explicit and as clear.  I don&amp;rsquo;t know why anyone would
+   want do that, but I forbid it explicitly in my implementation.&lt;/p&gt;
 
-&lt;p&gt;What I did is no revolution and nothing fancy, but it does allow me to get the interface I need from my function, namely two functions with the same name differing only in return types&amp;hellip; or almost.  I also find it to be expressive: it is clear at the call site that I will be modifying the string that is passed in.  Some might like it, others won&amp;rsquo;t!  If you find it useful, good.&lt;/p&gt;
+&lt;p&gt;What I did is no revolution and nothing fancy, but it does allow me to get the
+interface I need from my function, namely two functions with the same name
+differing only in return types&amp;hellip; or almost.  I also find it to be expressive: it
+is clear at the call site that I will be modifying the string that is passed in.
+Some might like it, others won&amp;rsquo;t!  If you find it useful, good.&lt;/p&gt;
 
 &lt;h3 id=&#34;alternative&#34;&gt;Alternative&lt;/h3&gt;
 
-&lt;p&gt;A friend suggested that another possible implementation would be to use variadic templates and call the function with an empty diamond.  I tried that version and it is possible.  I even put in a &lt;code&gt;static_assert&lt;/code&gt; to check that the function can&amp;rsquo;t be called with a non empty parameter pack.  That being said, I find that it is better to have the empty struct as a tag because it is a bit more explicit which overload actually acts in place (whereas in the empty parameter pack alternative, it is clear which overload is called (the template), but not whether this is the one working in place).  I suspect either implementation would result in the same binary code.  To me, another argument in favor of keeping the tag is that &lt;a href=&#34;https://arne-mertz.de/2016/tag-dispatch/&#34; target=&#34;_blank&#34;&gt;tag dispatching&lt;/a&gt; (which my technique is similar to) is familiar to many C++ programmers while seeing a call with the empty diamond is not so common (I think, I might be completely wrong).&lt;/p&gt;
+&lt;p&gt;A friend suggested that another possible implementation would be to use variadic
+templates and call the function with an empty diamond.  I tried that version and
+it is possible.  I even put in a &lt;code&gt;static_assert&lt;/code&gt; to check that the function can&amp;rsquo;t
+be called with a non empty parameter pack.  That being said, I find that it is
+better to have the empty struct as a tag because it is a bit more explicit which
+overload actually acts in place (whereas in the empty parameter pack alternative,
+it is clear which overload is called (the template), but not whether this is the
+one working in place).  I suspect either implementation would result in the same
+binary code.  To me, another argument in favor of keeping the tag is that
+&lt;a href=&#34;https://arne-mertz.de/2016/tag-dispatch/&#34; target=&#34;_blank&#34;&gt;tag dispatching&lt;/a&gt; (which my technique
+is similar to) is familiar to many C++ programmers while seeing a call with the
+empty diamond is not so common (I think, I might be completely wrong).&lt;/p&gt;
 
 &lt;h3 id=&#34;notes&#34;&gt;Notes&lt;/h3&gt;
 
-&lt;p&gt;&lt;sup&gt;[1]&lt;/sup&gt; I know that the second overload, the one returning a new string, could take it&amp;rsquo;s parameter by reference or by value (since I&amp;rsquo;m probably doing a copy in the implementation anyhow).  That would have complicated the explanation of the overloads (as in that case, both functions would not technically be exactly differing only in return type), so I chose to write my examples that way in the post.&lt;/p&gt;
+&lt;p&gt;&lt;sup&gt;[1]&lt;/sup&gt; I know that the second overload, the one returning a new string,
+could take it&amp;rsquo;s parameter by reference or by value (since I&amp;rsquo;m probably doing a
+copy in the implementation anyhow).  That would have complicated the explanation
+of the overloads (as in that case, both functions would not technically be
+exactly differing only in return type), so I chose to write my examples that way
+in the post.&lt;/p&gt;
 
-&lt;p&gt;&lt;sup&gt;[2]&lt;/sup&gt; I would have &amp;ldquo;Godbolted&amp;rdquo; my code, but I am not that good at reading assembler and when I tried with the std::string, the resulting assembler contains much more than my function and is not that simple to analyse.  I did it with ints, but then, starting at -O2, main becomes almost empty as the compiler can see all the constants and simplify all the way.&lt;/p&gt;
+&lt;p&gt;&lt;sup&gt;[2]&lt;/sup&gt; I would have &amp;ldquo;Godbolted&amp;rdquo; my code, but I am not that good at reading
+assembler and when I tried with the std::string, the resulting assembler contains
+much more than my function and is not that simple to analyse.  I did it with ints,
+but then, starting at -O2, main becomes almost empty as the compiler can see all
+the constants and simplify all the way.&lt;/p&gt;
 </description>
       </item>
       
@@ -454,7 +512,13 @@ int main( int argc, char* argv[] )
 
 &lt;h1 id=&#34;move-rvalues-forward-and-c&#34;&gt;move, rvalues, forward and C++&lt;/h1&gt;
 
-&lt;p&gt;Ever since I heard about it, the concept of move semantics has been intriguing and appealing to me.  I confess to liking new C++ things and micro-optimizations way too much&amp;hellip; but still, the concept of &amp;ldquo;moving&amp;rdquo; memory instead of copying it in order to gain efficiency is at least worth exploring, right?  Anyhow, I chose a function of mine and decided to try and make it handle move semantics properly. The function I chose is one that I use often enough that I thought it would make a difference.  It is the following template&lt;sup&gt;[1]&lt;/sup&gt;:&lt;/p&gt;
+&lt;p&gt;Ever since I heard about it, the concept of move semantics has been intriguing
+and appealing to me.  I confess to liking new C++ things and micro-optimizations
+way too much&amp;hellip; but still, the concept of &amp;ldquo;moving&amp;rdquo; memory instead of copying it
+in order to gain efficiency is at least worth exploring, right?  Anyhow, I chose
+a function of mine and decided to try and make it handle move semantics properly.
+The function I chose is one that I use often enough that I thought it would make
+a difference.  It is the following template&lt;sup&gt;[1]&lt;/sup&gt;:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt; typename T &amp;gt;
 std::string to_string( T const&amp;amp; to_convert )
@@ -465,53 +529,116 @@ std::string to_string( T const&amp;amp; to_convert )
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Now, it turns out that because it is a templated function, move semantics will have to be mixed with forwarding references and that, if you ask me, those things are gibberish if you don&amp;rsquo;t understand lvalues and rvalues.  This is what started my adventures into rvalue land.  After going through the process, I now realize that for this particular case, it is not really useful because &lt;a href=&#34;http://en.cppreference.com/w/cpp/io/basic_ostream/operator_ltlt&#34; target=&#34;_blank&#34;&gt;as far as I can tell&lt;/a&gt;,  &lt;code&gt;std::strinstream::operator&amp;lt;&amp;lt;&lt;/code&gt; is not overloaded on rvalue references.  Still, the exercise was enlightening and I now know (or at least think I know) a lot more about rvalues.  The information here is nothing new, probably incomplete and also probably full of inaccuracies when compared to the strict standard C++ language definitions (after all, this is in my own words), but I have found the information useful.  I guess this is a snapshot of my current understanding.  All the better if it helps anybody else.  Now, on to my journey.&lt;/p&gt;
+&lt;p&gt;Now, it turns out that because it is a templated function, move semantics will
+have to be mixed with forwarding references and that, if you ask me, those things
+are gibberish if you don&amp;rsquo;t understand lvalues and rvalues.  This is what started
+my adventures into rvalue land.  After going through the process, I now realize
+that for this particular case, it is not really useful because
+&lt;a href=&#34;http://en.cppreference.com/w/cpp/io/basic_ostream/operator_ltlt&#34; target=&#34;_blank&#34;&gt;as far as I can tell&lt;/a&gt;,
+std::strinstream::operator&amp;lt;&amp;lt;` is not overloaded on rvalue references.  Still, the
+exercise was enlightening and I now know (or at least think I know) a lot more
+about rvalues.  The information here is nothing new, probably incomplete and also
+probably full of inaccuracies when compared to the strict standard C++ language
+definitions (after all, this is in my own words), but I have found the information
+useful.  I guess this is a snapshot of my current understanding.  All the better
+if it helps anybody else.  Now, on to my journey.&lt;/p&gt;
 
 &lt;h3 id=&#34;a-new-kind-of-references&#34;&gt;A new kind of references: &amp;amp;&amp;amp;&lt;/h3&gt;
 
-&lt;p&gt;The idea behind move semantics is that when you need the value a variable contains and it is a temporary (or simply about to get out of scope), you could make the memory it owns yours instead of copying the value in your own memory.  This should execute faster then the copying as it is doing less work.  Of course, saving copies will not make much difference is you are copying a single &lt;code&gt;int&lt;/code&gt;, but if you are, for instance, copying a &lt;code&gt;std::vector&lt;/code&gt; of an image class, stealing the pointer to the images instead of copying the memory should have a large impact on runtime efficiency.  For this to be possible, there has to be a mechanism to detect the temporary nature of a variable and select what to do when a variable is temporary and when a variable is not.  Starting with the 2011 standard, C++ now defines rvalue references, identified by a double ampersand symbol (&lt;code&gt;&amp;amp;&amp;amp;&lt;/code&gt;), which will only bind to temporary values.&lt;/p&gt;
+&lt;p&gt;The idea behind move semantics is that when you need the value a variable contains
+and it is a temporary (or simply about to get out of scope), you could make the
+memory it owns yours instead of copying the value in your own memory.  This should
+execute faster then the copying as it is doing less work.  Of course, saving
+copies will not make much difference is you are copying a single &lt;code&gt;int&lt;/code&gt;, but if you
+are, for instance, copying a &lt;code&gt;std::vector&lt;/code&gt; of an image class, stealing the pointer
+to the images instead of copying the memory should have a large impact on runtime
+efficiency.  For this to be possible, there has to be a mechanism to detect the
+temporary nature of a variable and select what to do when a variable is temporary
+and when a variable is not.  Starting with the 2011 standard, C++ now defines
+rvalue references, identified by a double ampersand symbol (&lt;code&gt;&amp;amp;&amp;amp;&lt;/code&gt;), which will only
+bind to temporary values.&lt;/p&gt;
 
-&lt;p&gt;This gives us a way to determine if a parameter is a temporary value: create an overload (or a single function) which takes an rvalue reference as its input.  Since this reference parameter will only bind to a temporary value, one can assume that the parameter cannot normally be used elsewhere in the program once the function returns.  When this guarantee holds, one can safely steal (or move) the internals of the parameter(s) instead of making a copy(ies), potentially making the function more efficient.  This is the crux of move semantics.  Of course, the devil is in the details, as I have found out.&lt;/p&gt;
+&lt;p&gt;This gives us a way to determine if a parameter is a temporary value: create an
+overload (or a single function) which takes an rvalue reference as its input.
+Since this reference parameter will only bind to a temporary value, one can assume
+that the parameter cannot normally be used elsewhere in the program once the
+function returns.  When this guarantee holds, one can safely steal (or move) the
+internals of the parameter(s) instead of making a copy(ies), potentially making
+the function more efficient.  This is the crux of move semantics.  Of course, the
+devil is in the details, as I have found out.&lt;/p&gt;
 
 &lt;h4 id=&#34;quick-digression-value-categories&#34;&gt;Quick digression: value categories&lt;/h4&gt;
 
-&lt;p&gt;Lvalues and rvalues are &lt;a href=&#34;http://en.cppreference.com/w/cpp/language/value_category&#34; target=&#34;_blank&#34;&gt;value categories&lt;/a&gt;.  Those two categories have been part of C++ since its first standardization in 1998 and were carried over from C (although in C, no rvalues were directly defined and &amp;ldquo;not lvalue&amp;rdquo; was deemed sufficient&lt;sup&gt;[2]&lt;/sup&gt;).  Those two categories take their name from their original, although now erroneous, definition, which was to think of them as the &amp;ldquo;left&amp;rdquo; and &amp;ldquo;right&amp;rdquo; operands of an assignment:&lt;/p&gt;
+&lt;p&gt;Lvalues and rvalues are
+&lt;a href=&#34;http://en.cppreference.com/w/cpp/language/value_category&#34; target=&#34;_blank&#34;&gt;value categories&lt;/a&gt;.
+Those two categories have been part of C++ since its first standardization in 1998
+and were carried over from C (although in C, no rvalues were directly defined and
+&amp;ldquo;not lvalue&amp;rdquo; was deemed sufficient&lt;sup&gt;[2]&lt;/sup&gt;).  Those two categories take
+their name from their original, although now erroneous, definition, which was to
+think of them as the &amp;ldquo;left&amp;rdquo; and &amp;ldquo;right&amp;rdquo; operands of an assignment:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;int a = 7; // a is an lvalue and 7 is an rvalue
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;With that definition, &amp;ldquo;assignability&amp;rdquo; appears as the main difference between lvalues and rvalues: if something cannot be assigned to, it is an rvalue.  I honestly do not know if it is the case in C, but I know that is not the case in C++.  Here is an example of an lvalue that is not assignable in C++.&lt;/p&gt;
+&lt;p&gt;With that definition, &amp;ldquo;assignability&amp;rdquo; appears as the main difference between
+lvalues and rvalues: if something cannot be assigned to, it is an rvalue.  I
+honestly do not know if it is the case in C, but I know that is not the case in
+C++.  Here is an example of an lvalue that is not assignable in C++.&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;const int b{ 8 }; // b is an lvalue
 b = 9; // error, can&#39;t assign to const even though it is an lvalue
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;The const variable is still an lvalue, but one cannot assign a new value to it after construction.  So although it is not assignable, it is an lvalue.  It is my understanding that the more interesting property is not &amp;ldquo;assignability&amp;rdquo;, but rather &amp;ldquo;addressability&amp;rdquo;, i.e. the capacity to refer to a value.  I can take the address of both variables defined in the previous examples and refer to it, but I cannot take the address of the literals and refer to them later in the program.&lt;/p&gt;
+&lt;p&gt;The const variable is still an lvalue, but one cannot assign a new value to it
+after construction.  So although it is not assignable, it is an lvalue.  It is my
+understanding that the more interesting property is not &amp;ldquo;assignability&amp;rdquo;, but
+rather &amp;ldquo;addressability&amp;rdquo;, i.e. the capacity to refer to a value.  I can take the
+address of both variables defined in the previous examples and refer to it, but
+I cannot take the address of the literals and refer to them later in the program.&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;int a;
 int&amp;amp; c = &amp;amp;a; // valid
 int&amp;amp; d = &amp;amp;8; // invalid, can&#39;t refer to (or take address of) the literal 8
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;So a better rule for rvalues is the following: if I can take the address of a value or expression and reference it later in the program, the value is an lvalue; otherwise, it is an rvalue.&lt;/p&gt;
+&lt;p&gt;So a better rule for rvalues is the following: if I can take the address of a
+value or expression and reference it later in the program, the value is an lvalue;
+otherwise, it is an rvalue.&lt;/p&gt;
 
-&lt;p&gt;This is not the complete picture of value categories, since five value categories are now defined in C++ (lvalues, glvalues, rvalues, prvalues and xvalues), but it turns out to be an adequate rule of thumb for lvalue/rvalue discrimination and that is what matters most for move semantics.  In &lt;a href=&#34;https://isocpp.org/blog/2012/11/universal-references-in-c11-scott-meyers&#34; target=&#34;_blank&#34;&gt;this&lt;/a&gt; blog post on &lt;a href=&#34;http://isocpp.org&#34; target=&#34;_blank&#34;&gt;isocpp.org&lt;/a&gt;, &lt;a href=&#34;http://scottmeyers.blogspot.ca/&#34; target=&#34;_blank&#34;&gt;Scott Meyers&lt;/a&gt; gives this heuristics to determine the general type (lvalue vs rvalue) of an expression or variable:&lt;/p&gt;
+&lt;p&gt;This is not the complete picture of value categories, since five value categories
+are now defined in C++ (lvalues, glvalues, rvalues, prvalues and xvalues), but it
+turns out to be an adequate rule of thumb for lvalue/rvalue discrimination and
+that is what matters most for move semantics.  In
+&lt;a href=&#34;https://isocpp.org/blog/2012/11/universal-references-in-c11-scott-meyers&#34; target=&#34;_blank&#34;&gt;this&lt;/a&gt;
+blog post on &lt;a href=&#34;http://isocpp.org&#34; target=&#34;_blank&#34;&gt;isocpp.org&lt;/a&gt;,
+&lt;a href=&#34;http://scottmeyers.blogspot.ca/&#34; target=&#34;_blank&#34;&gt;Scott Meyers&lt;/a&gt; gives this heuristics to determine
+the general type (lvalue vs rvalue) of an expression or variable:&lt;/p&gt;
 
 &lt;ul&gt;
 &lt;li&gt;If you can take the address of an expression, the expression is an lvalue.&lt;/li&gt;
-&lt;li&gt;If the type of an expression is an lvalue reference (e.g., &lt;code&gt;T&amp;amp;&lt;/code&gt; or `const T&amp;amp;, etc.), that expression is an lvalue.&lt;/li&gt;
+&lt;li&gt;If the type of an expression is an lvalue reference (e.g., &lt;code&gt;T&amp;amp;&lt;/code&gt; or `const T&amp;amp;,
+etc.), that expression is an lvalue.&lt;/li&gt;
 &lt;li&gt;Otherwise, the expression is an rvalue.&lt;/li&gt;
 &lt;/ul&gt;
 
 &lt;p&gt;which is a quote from the linked blog post.  Again, in Scott&amp;rsquo;s words:&lt;/p&gt;
 
 &lt;blockquote&gt;
-&lt;p&gt;Conceptually (and typically also in fact), rvalues correspond to temporary objects, such as those returned from functions or created through implicit type conversions. Most literal values (e.g., 10 and 5.3) are also rvalues.&lt;/p&gt;
+&lt;p&gt;Conceptually (and typically also in fact), rvalues correspond to temporary
+objects, such as those returned from functions or created through implicit type
+conversions.  Most literal values (e.g., 10 and 5.3) are also rvalues.&lt;/p&gt;
 &lt;/blockquote&gt;
 
-&lt;p&gt;I think a nice feature of this heuristic is that it helps you remember that the type of an expression is independent of whether the expression is an lvalue or an rvalue. That is, given a type &lt;code&gt;T&lt;/code&gt;, you can have lvalues of type &lt;code&gt;T&lt;/code&gt; as well as rvalues of type &lt;code&gt;T&lt;/code&gt;. It’s especially important to remember this when dealing with a [function] parameter of rvalue reference type, because the parameter itself is an lvalue.&lt;/p&gt;
+&lt;p&gt;I think a nice feature of this heuristic is that it helps you remember that the
+type of an expression is independent of whether the expression is an lvalue or an
+rvalue. That is, given a type &lt;code&gt;T&lt;/code&gt;, you can have lvalues of type &lt;code&gt;T&lt;/code&gt; as well as
+rvalues of type &lt;code&gt;T&lt;/code&gt;. It’s especially important to remember this when dealing with
+a [function] parameter of rvalue reference type, because the parameter itself is
+an lvalue.&lt;/p&gt;
 
-&lt;p&gt;That last sentence took me a while to fully understand.  It is illustrated by the following example (where the new double ampersand symbol (&lt;code&gt;&amp;amp;&amp;amp;&lt;/code&gt;) for rvalue references is used):&lt;/p&gt;
+&lt;p&gt;That last sentence took me a while to fully understand.  It is illustrated by the
+following example (where the new double ampersand symbol (&lt;code&gt;&amp;amp;&amp;amp;&lt;/code&gt;) for rvalue
+references is used):&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;void foo( MyType&amp;amp;&amp;amp; param )
 {
@@ -521,11 +648,15 @@ int&amp;amp; d = &amp;amp;8; // invalid, can&#39;t refer to (or take address of)
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;This fact that the parameter is an lvalue inside the function might seem like a simple detail, but it will turn out to be necessary to explain why &lt;code&gt;std::move&lt;/code&gt; and &lt;code&gt;std::forward&lt;/code&gt; are necessary later on.&lt;/p&gt;
+&lt;p&gt;This fact that the parameter is an lvalue inside the function might seem like a
+simple detail, but it will turn out to be necessary to explain why &lt;code&gt;std::move&lt;/code&gt; and
+&lt;code&gt;std::forward&lt;/code&gt; are necessary later on.&lt;/p&gt;
 
 &lt;h4 id=&#34;overloading-on-rvalue-reference&#34;&gt;Overloading on rvalue reference&lt;/h4&gt;
 
-&lt;p&gt;So the idea, as mentioned, is to create an overload on rvalue references.  There is no way of representing rvalues (almost by definition from a certain point of view), so rvalue references are the only option.  The following is a simple example.&lt;/p&gt;
+&lt;p&gt;So the idea, as mentioned, is to create an overload on rvalue references.  There
+is no way of representing rvalues (almost by definition from a certain point of
+view), so rvalue references are the only option.  The following is a simple example.&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;#include &amp;lt;iostream&amp;gt;
 
@@ -558,7 +689,10 @@ int main( int argc, char* argv[] )
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;In this case, this does not buy you much, but the snippet above is compilable by any C++11 conformant compiler.  This little code should output &lt;code&gt;foo( int const&amp;amp; param )&lt;/code&gt; three times and &lt;code&gt;foo( int&amp;amp;&amp;amp; param )&lt;/code&gt; twice.  A non compilable but more realistic/useful example would be:&lt;/p&gt;
+&lt;p&gt;In this case, this does not buy you much, but the snippet above is compilable by
+any C++11 conformant compiler.  This little code should output
+&lt;code&gt;foo( int const&amp;amp; param )&lt;/code&gt; three times and &lt;code&gt;foo( int&amp;amp;&amp;amp; param )&lt;/code&gt; twice.  A non
+compilable but more realistic/useful example would be:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;std::vector&amp;lt;int&amp;gt; foo();
 
@@ -573,11 +707,20 @@ auto obj_1 = make_from_std_vec( the_vec );  // binds to overload 1
 auto obj_2 = make_from_std_vec( foo() );    // binds to overload 2
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Here, because &lt;code&gt;std::vector&lt;/code&gt; has been updated to allow move semantics, the second overload will be able to move the memory instead of copying it into the &lt;code&gt;MyCoolClass&lt;/code&gt; object which should save a copy.&lt;/p&gt;
+&lt;p&gt;Here, because &lt;code&gt;std::vector&lt;/code&gt; has been updated to allow move semantics, the second
+overload will be able to move the memory instead of copying it into the
+&lt;code&gt;MyCoolClass&lt;/code&gt; object which should save a copy.&lt;/p&gt;
 
 &lt;h4 id=&#34;implementing-enters-std-move&#34;&gt;Implementing : enters std::move&lt;/h4&gt;
 
-&lt;p&gt;Once you have an overload which selects the rvalues, you have to implement it.  Most (if not all) POD types and STL types have been updated for move semantics, although I am not sure that moving is faster than copying in the case of &lt;code&gt;int&lt;/code&gt;, for instance.  That being said, this means that move constructors and move assignment operators are available for &lt;code&gt;std::vector&lt;/code&gt;.  If you pass an rvalue to those, they will move.  But that brings us back to the discussion on function parameters inside of the function being lvalues.  That means that the following will not actually move anything and will instead make a copy:&lt;/p&gt;
+&lt;p&gt;Once you have an overload which selects the rvalues, you have to implement it.
+Most (if not all) POD types and STL types have been updated for move semantics,
+although I am not sure that moving is faster than copying in the case of &lt;code&gt;int&lt;/code&gt;,
+for instance.  That being said, this means that move constructors and move
+assignment operators are available for &lt;code&gt;std::vector&lt;/code&gt;.  If you pass an rvalue to
+those, they will move.  But that brings us back to the discussion on function
+parameters inside of the function being lvalues.  That means that the following
+will not actually move anything and will instead make a copy:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;std::vector&amp;lt;int&amp;gt; steal_guts_and_do_stuff( std::vector&amp;lt;int&amp;gt;&amp;amp;&amp;amp; vec )
 {
@@ -587,7 +730,22 @@ auto obj_2 = make_from_std_vec( foo() );    // binds to overload 2
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;That is because even though &lt;a href=&#34;http://en.cppreference.com/w/cpp/container/vector/vector&#34; target=&#34;_blank&#34;&gt;there is&lt;/a&gt; an overload of the &lt;code&gt;std::vector&lt;/code&gt; constructor for rvalues, what you actually passed as a parameter (&lt;code&gt;vec&lt;/code&gt;) is &lt;em&gt;&lt;strong&gt;not&lt;/strong&gt;&lt;/em&gt; an rvalue (that was explained in previous sections).  Thus, the compiler will select the copy constructor instead of the move constructor.  That being said, because you are implementing the rvalue reference overload of your function (in this case, the &lt;code&gt;steal_guts_and_do_stuff&lt;/code&gt; function), you know that in the &lt;em&gt;&lt;strong&gt;caller&lt;/strong&gt;&lt;/em&gt; scope, the parameter is actually an rvalue.  This means if you had a way to cast the parameter to an rvalue inside the function implementation to tell the compiler to select the move constructor for &lt;code&gt;std::vector&lt;/code&gt;, then that one would be selected.  This can be done with the new function &lt;code&gt;std::move&lt;/code&gt;.  All this function does is &lt;em&gt;&lt;strong&gt;unconditionally&lt;/strong&gt;&lt;/em&gt; cast its input to an rvalue reference.  The casting is done via the &lt;a href=&#34;http://en.cppreference.com/w/cpp/language/reference&#34; target=&#34;_blank&#34;&gt;reference&lt;/a&gt; &lt;a href=&#34;http://thbecker.net/articles/rvalue_references/section_08.html&#34; target=&#34;_blank&#34;&gt;collapsing rules&lt;/a&gt;.   Thus, the implementation above should actually be written as:&lt;/p&gt;
+&lt;p&gt;That is because even though
+&lt;a href=&#34;http://en.cppreference.com/w/cpp/container/vector/vector&#34; target=&#34;_blank&#34;&gt;there is&lt;/a&gt; an overload
+of the &lt;code&gt;std::vector&lt;/code&gt; constructor for rvalues, what you actually passed as a
+parameter (&lt;code&gt;vec&lt;/code&gt;) is &lt;em&gt;&lt;strong&gt;not&lt;/strong&gt;&lt;/em&gt; an rvalue (that was explained in previous sections).
+Thus, the compiler will select the copy constructor instead of the move
+constructor.  That being said, because you are implementing the rvalue reference
+overload of your function (in this case, the &lt;code&gt;steal_guts_and_do_stuff&lt;/code&gt; function),
+you know that in the &lt;em&gt;&lt;strong&gt;caller&lt;/strong&gt;&lt;/em&gt; scope, the parameter is actually an rvalue.
+This means if you had a way to cast the parameter to an rvalue inside the function
+implementation to tell the compiler to select the move constructor for
+&lt;code&gt;std::vector&lt;/code&gt;, then that one would be selected.  This can be done with the new
+function &lt;code&gt;std::move&lt;/code&gt;.  All this function does is &lt;em&gt;&lt;strong&gt;unconditionally&lt;/strong&gt;&lt;/em&gt; cast its
+input to an rvalue reference.  The casting is done via the
+&lt;a href=&#34;http://en.cppreference.com/w/cpp/language/reference&#34; target=&#34;_blank&#34;&gt;reference&lt;/a&gt;
+&lt;a href=&#34;http://thbecker.net/articles/rvalue_references/section_08.html&#34; target=&#34;_blank&#34;&gt;collapsing rules&lt;/a&gt;.
+Thus, the implementation above should actually be written as:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;std::vector&amp;lt;int&amp;gt; steal_guts_and_do_stuff( std::vector&amp;lt;int&amp;gt;&amp;amp;&amp;amp; vec )
 {
@@ -597,25 +755,62 @@ auto obj_2 = make_from_std_vec( foo() );    // binds to overload 2
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;where you can see that &lt;code&gt;std::move&lt;/code&gt; has been used on &lt;code&gt;vec&lt;/code&gt;.  That is pretty much it.  Just insure that in your rvalue overload implementations, you use &lt;code&gt;std::move&lt;/code&gt; on all the parameters that you want to move from and that you do not reuse those parameters after they have been moved from.  If you want your user defined types to be &amp;ldquo;movable from&amp;rdquo;, then define a move constructor and a move assignment operator and then a user will be able to move from your types.  And notice that you do not use &lt;code&gt;std::move&lt;/code&gt; on the return statement.  Moving is done when you &lt;em&gt;use&lt;/em&gt; the input parameter to cast it to an rvalue forcing the compiler to take the rvalue overload of the function you are calling (in my case, move constructor).  You do not want to move the return.&lt;/p&gt;
+&lt;p&gt;where you can see that &lt;code&gt;std::move&lt;/code&gt; has been used on &lt;code&gt;vec&lt;/code&gt;.  That is pretty much
+it.  Just insure that in your rvalue overload implementations, you use &lt;code&gt;std::move&lt;/code&gt;
+on all the parameters that you want to move from and that you do not reuse those
+parameters after they have been moved from.  If you want your user defined types
+to be &amp;ldquo;movable from&amp;rdquo;, then define a move constructor and a move assignment
+operator and then a user will be able to move from your types.  And notice that
+you do not use &lt;code&gt;std::move&lt;/code&gt; on the return statement.  Moving is done when you &lt;em&gt;use&lt;/em&gt;
+the input parameter to cast it to an rvalue forcing the compiler to take the
+rvalue overload of the function you are calling (in my case, move constructor).
+You do not want to move the return.&lt;/p&gt;
 
 &lt;h3 id=&#34;and-then-they-were-three-t&#34;&gt;And then they were three: T&amp;amp;&amp;amp;&lt;/h3&gt;
 
-&lt;p&gt;As I have previously mentioned, the function that I wanted to convert to move semantics was a template.  There is a catch in this case.  Actually, this function declaration:&lt;/p&gt;
+&lt;p&gt;As I have previously mentioned, the function that I wanted to convert to move
+semantics was a template.  There is a catch in this case.  Actually, this function
+declaration:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt; typename T &amp;gt;
 void foo( T&amp;amp;&amp;amp; param );
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;does &lt;strong&gt;&lt;em&gt;not&lt;/em&gt;&lt;/strong&gt; declare an rvalue reference overload.  The reference here is a forwarding reference&lt;sup&gt;[3]&lt;/sup&gt;.  Referencing once again Scott Meyer&amp;rsquo;s &lt;a href=&#34;https://isocpp.org/blog/2012/11/universal-references-in-c11-scott-meyers&#34; target=&#34;_blank&#34;&gt;blog post&lt;/a&gt; on &lt;a href=&#34;http://isocpp.org&#34; target=&#34;_blank&#34;&gt;isocpp.org&lt;/a&gt;, one finds this rule of thumb to determine the if an expression is a forwarding reference:&lt;/p&gt;
+&lt;p&gt;does &lt;strong&gt;&lt;em&gt;not&lt;/em&gt;&lt;/strong&gt; declare an rvalue reference overload.  The reference here is a
+forwarding reference&lt;sup&gt;[3]&lt;/sup&gt;.  Referencing once again Scott Meyer&amp;rsquo;s
+&lt;a href=&#34;https://isocpp.org/blog/2012/11/universal-references-in-c11-scott-meyers&#34; target=&#34;_blank&#34;&gt;blog post&lt;/a&gt;
+on &lt;a href=&#34;http://isocpp.org&#34; target=&#34;_blank&#34;&gt;isocpp.org&lt;/a&gt;, one finds this rule of thumb to determine the
+if an expression is a forwarding reference:&lt;/p&gt;
 
 &lt;blockquote&gt;
-&lt;p&gt;If a variable or parameter is declared to have type T&amp;amp;&amp;amp; for some deduced type T, that variable or parameter is a universal reference.&lt;/p&gt;
+&lt;p&gt;If a variable or parameter is declared to have type T&amp;amp;&amp;amp; for some deduced type T,
+that variable or parameter is a universal reference.&lt;/p&gt;
 &lt;/blockquote&gt;
 
-&lt;p&gt;Deduced type mostly means templates and `auto (which I won&amp;rsquo;t talk about anymore).  What is particular about forwarding references is that they can bind to both lvalues and rvalues, depending on what type (not value) it is initialized with.  In fact, they will bind to lvalues, rvalues, const, non-const, volatile, non-volatile&amp;hellip;  This makes them really greedy and has some interesting consequences on the overload set, but that&amp;rsquo;s not the subject here.&lt;/p&gt;
+&lt;p&gt;Deduced type mostly means templates and `auto (which I won&amp;rsquo;t talk about anymore).
+What is particular about forwarding references is that they can bind to both
+lvalues and rvalues, depending on what type (not value) it is initialized with.
+In fact, they will bind to lvalues, rvalues, const, non-const, volatile,
+non-volatile&amp;hellip;  This makes them really greedy and has some interesting
+consequences on the overload set, but that&amp;rsquo;s not the subject here.&lt;/p&gt;
 
-&lt;p&gt;So now, three types of references have been mentioned: lvalue references, rvalue references and forwarding references.  When implementing a function overload for one of the reference type, inside the function body, one must make sure to understand what should happen.  For an lvalue reference overload, the parameter is an lvalue and should never be moved from.  For an rvalue reference overload, the parameter is always an rvalue, thus temporary, and can always be moved from.  For a forwarding reference, the parameter can be either an lvalue or an rvalue and should be moved from in the latter case, but not the former.  The need to cast in the function body has been previously explained.  I also mentioned that the tool to cast unconditionally to an rvalue reference is &lt;code&gt;std::move&lt;/code&gt;.  For forwarding references, the tool to &lt;strong&gt;&lt;em&gt;conditionally&lt;/em&gt;&lt;/strong&gt; cast to rvalue references is &lt;code&gt;std::forward&lt;/code&gt;.  This standard library template will cast an lvalue reference (or something that binds to an lvalue reference) to an lvalue reference and an rvalue reference (or something that binds to an rvalue reference) to an rvalue reference.  The mechanism used for this is reference collapsing and the result is exactly what we need to implement the forwarding reference overload.  The following code snippet illustrates what usually should be done:&lt;/p&gt;
+&lt;p&gt;So now, three types of references have been mentioned: lvalue references, rvalue
+references and forwarding references.  When implementing a function overload for
+one of the reference type, inside the function body, one must make sure to
+understand what should happen.  For an lvalue reference overload, the parameter
+is an lvalue and should never be moved from.  For an rvalue reference overload,
+the parameter is always an rvalue, thus temporary, and can always be moved from.
+For a forwarding reference, the parameter can be either an lvalue or an rvalue
+and should be moved from in the latter case, but not the former.  The need to
+cast in the function body has been previously explained.  I also mentioned that
+the tool to cast unconditionally to an rvalue reference is &lt;code&gt;std::move&lt;/code&gt;.  For
+forwarding references, the tool to &lt;strong&gt;&lt;em&gt;conditionally&lt;/em&gt;&lt;/strong&gt; cast to rvalue references
+is &lt;code&gt;std::forward&lt;/code&gt;.  This standard library template will cast an lvalue reference
+(or something that binds to an lvalue reference) to an lvalue reference and an
+rvalue reference (or something that binds to an rvalue reference) to an rvalue
+reference.  The mechanism used for this is reference collapsing and the result is
+exactly what we need to implement the forwarding reference overload.  The
+following code snippet illustrates what usually should be done:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;MyClass from_vec( std::vector const&amp;amp; vec )
 {
@@ -634,11 +829,16 @@ MyClass from_container( C&amp;amp;&amp;amp; container )
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;It should be noted that for &lt;code&gt;std::forward&lt;/code&gt;, template argument deduction &lt;a href=&#34;http://stackoverflow.com/questions/7779900/why-is-template-argument-deduction-disabled-with-stdforward&#34; target=&#34;_blank&#34;&gt;would not produce&lt;/a&gt; &lt;a href=&#34;http://stackoverflow.com/questions/28828159/usage-of-stdforward-vs-stdmove&#34; target=&#34;_blank&#34;&gt;the desired results&lt;/a&gt;, so the type has to be repeated in the call to the function.&lt;/p&gt;
+&lt;p&gt;It should be noted that for &lt;code&gt;std::forward&lt;/code&gt;, template argument deduction
+&lt;a href=&#34;http://stackoverflow.com/questions/7779900/why-is-template-
+argument-deduction-disabled-with-stdforward&#34; target=&#34;_blank&#34;&gt;would not produce&lt;/a&gt;
+&lt;a href=&#34;http://stackoverflow.com/questions/28828159/usage-of-stdforward-vs-stdmove&#34; target=&#34;_blank&#34;&gt;the desired results&lt;/a&gt;, so
+the type has to be repeated in the call to the function.&lt;/p&gt;
 
 &lt;h3 id=&#34;the-result&#34;&gt;The result&lt;/h3&gt;
 
-&lt;p&gt;So, now, I have everything I need to write my function.  It is a template, so it will use the forwarding references.  This is my new implementation:&lt;/p&gt;
+&lt;p&gt;So, now, I have everything I need to write my function.  It is a template, so it
+will use the forwarding references.  This is my new implementation:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt; typename T &amp;gt;
 std::string to_string( T&amp;amp;&amp;amp; to_convert )
@@ -649,19 +849,40 @@ std::string to_string( T&amp;amp;&amp;amp; to_convert )
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;If (and as I pointed out in the intro, it is not the case) the &lt;code&gt;stringstream&lt;/code&gt; redirect operator (&lt;code&gt;&amp;lt;&amp;lt;&lt;/code&gt;) has an rvalue overload which steals the internals of it&amp;rsquo;s argument, it will do so for the cases where &lt;code&gt;to_string&lt;/code&gt; is called with an rvalue and it will use the regular lvalue reference overload when called with an lvalue.  This is the &amp;ldquo;optimal&amp;rdquo; or near optimal behavior for my function.&lt;/p&gt;
+&lt;p&gt;If (and as I pointed out in the intro, it is not the case) the &lt;code&gt;stringstream&lt;/code&gt;
+redirect operator (&lt;code&gt;&amp;lt;&amp;lt;&lt;/code&gt;) has an rvalue overload which steals the internals of
+it&amp;rsquo;s argument, it will do so for the cases where &lt;code&gt;to_string&lt;/code&gt; is called with an
+rvalue and it will use the regular lvalue reference overload when called with an
+lvalue.  This is the &amp;ldquo;optimal&amp;rdquo; or near optimal behavior for my function.&lt;/p&gt;
 
-&lt;p&gt;To get to my implementation, I had first simply stuck a &lt;code&gt;&amp;amp;&amp;amp;&lt;/code&gt; symbol to my reference (removing the const, of course) and used &lt;code&gt;std::move&lt;/code&gt;.  It failed for reasons that are now apparent from the discussion in the previous sections.  After that, I started to read all of the references I link in these notes (and more) and realized I needed to use &lt;code&gt;std::forward&lt;/code&gt;.  I finally realized that for my function, this is useless, but the journey was worth it!&lt;/p&gt;
+&lt;p&gt;To get to my implementation, I had first simply stuck a &lt;code&gt;&amp;amp;&amp;amp;&lt;/code&gt; symbol to my reference
+(removing the const, of course) and used &lt;code&gt;std::move&lt;/code&gt;.  It failed for reasons that
+are now apparent from the discussion in the previous sections.  After that, I
+started to read all of the references I link in these notes (and more) and realized
+I needed to use &lt;code&gt;std::forward&lt;/code&gt;.  I finally realized that for my function, this is
+useless, but the journey was worth it!&lt;/p&gt;
 
 &lt;h3 id=&#34;notes&#34;&gt;Notes&lt;/h3&gt;
 
-&lt;p&gt;&lt;sup&gt;[1]&lt;/sup&gt; Yes, I am sure someone else would do a better job at writing it more &lt;a href=&#34;http://zverovich.net/2013/09/07/integer-to-string-conversion-in-cplusplus.html&#34; target=&#34;_blank&#34;&gt;generic, faster, better&lt;/a&gt;, etc.; not the point!&lt;/p&gt;
+&lt;p&gt;&lt;sup&gt;[1]&lt;/sup&gt; Yes, I am sure someone else would do a better job at writing it
+more &lt;a href=&#34;http://zverovich.net/2013/09/07/integer-to-string-
+conversion-in-cplusplus.html&#34; target=&#34;_blank&#34;&gt;generic, faster, better&lt;/a&gt;, etc.; not the point!&lt;/p&gt;
 
-&lt;p&gt;&lt;sup&gt;[2]&lt;/sup&gt; The C language itself borrowed the concepts from CPL (see &lt;a href=&#34;http://blog.smartbear.com/development/c11-tutorial-explaining-the-ever-elusive-lvalues-and-rvalues/&#34; target=&#34;_blank&#34;&gt;this&lt;/a&gt; blog post by Danny Kalev).&lt;/p&gt;
+&lt;p&gt;&lt;sup&gt;[2]&lt;/sup&gt; The C language itself borrowed the concepts from CPL (see
+&lt;a href=&#34;http://blog.smartbear.com/development/c11-tutorial-explaining-the-ever-
+elusive-lvalues-and-rvalues/&#34; target=&#34;_blank&#34;&gt;this&lt;/a&gt; blog post by Danny Kalev).&lt;/p&gt;
 
-&lt;p&gt;&lt;sup&gt;[3]&lt;/sup&gt; Scott Meyers used the terminology Universal References both in his articles and his book &lt;a href=&#34;http://shop.oreilly.com/product/0636920033707.do&#34; target=&#34;_blank&#34;&gt;Effective Modern C++&lt;/a&gt;, but after discussion with members of the ISO C++ committee and the C++ community, he agreed to include a footnote (in Item 24) to say that since they should almost always be used with &lt;code&gt;std::forward&lt;/code&gt;, the name forwarding references is gaining traction.&lt;/p&gt;
+&lt;p&gt;&lt;sup&gt;[3]&lt;/sup&gt; Scott Meyers used the terminology Universal References both in
+his articles and his book
+&lt;a href=&#34;http://shop.oreilly.com/product/0636920033707.do&#34; target=&#34;_blank&#34;&gt;Effective Modern C++&lt;/a&gt;, but
+after discussion with members of the ISO C++ committee and the C++ community, he
+agreed to include a footnote (in Item 24) to say that since they should almost
+always be used with &lt;code&gt;std::forward&lt;/code&gt;, the name forwarding references is gaining
+traction.&lt;/p&gt;
 
-&lt;p&gt;&lt;sup&gt;[4]&lt;/sup&gt; Unreferenced in the text: &lt;a href=&#34;http://stackoverflow.com/questions/36696312/why-is-pass-by-value-and-pass-by-rvalue-overload-c-function-call-ambiguous&#34; target=&#34;_blank&#34;&gt;ambiguous call&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;sup&gt;[4]&lt;/sup&gt; Unreferenced in the text:
+&lt;a href=&#34;http://stackoverflow.com/questions/36696312/
+why-is-pass-by-value-and-pass-by-rvalue-overload-c-function-call-ambiguous&#34; target=&#34;_blank&#34;&gt;ambiguous call&lt;/a&gt;&lt;/p&gt;
 </description>
       </item>
       
@@ -773,11 +994,26 @@ more often (hopefully).&lt;/p&gt;
 
 &lt;h3 id=&#34;python-s-timeit-and-repeat&#34;&gt;Python&amp;rsquo;s timeit and repeat&lt;/h3&gt;
 
-&lt;p&gt;I sometimes want to time my code to see which version of a function I wrote runs faster.  I know that you should &lt;em&gt;&lt;strong&gt;always&lt;/strong&gt;&lt;/em&gt; profile before you optimize and that &lt;a href=&#34;https://en.wikipedia.org/wiki/Benchmark_%28computing%29#Types_of_benchmarks&#34; target=&#34;_blank&#34;&gt;micro-benchmarking&lt;/a&gt; has &lt;a href=&#34;http://stackoverflow.com/a/2842707&#34; target=&#34;_blank&#34;&gt;lots of caveats&lt;/a&gt; (some of which I have myself fallen victim to), but still, sometimes, curiosity gets the best of me and I just have to know.  When I am writing in Python, I use the &lt;code&gt;timeit&lt;/code&gt; &lt;a href=&#34;https://docs.python.org/3/library/timeit.html?highlight=timeit#module-timeit&#34; target=&#34;_blank&#34;&gt;module&lt;/a&gt; to measure code execution.  This handy module has two main utility functions: &lt;code&gt;timeit&lt;/code&gt; and &lt;code&gt;repeat&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;I sometimes want to time my code to see which version of a function I wrote runs
+faster.  I know that you should &lt;em&gt;&lt;strong&gt;always&lt;/strong&gt;&lt;/em&gt; profile before you optimize and that
+&lt;a href=&#34;https://en.wikipedia.org/wiki/Benchmark_%28computing%29#Types_of_benchmarks&#34; target=&#34;_blank&#34;&gt;micro-benchmarking&lt;/a&gt;
+has &lt;a href=&#34;http://stackoverflow.com/a/2842707&#34; target=&#34;_blank&#34;&gt;lots of caveats&lt;/a&gt; (some of which I have
+myself fallen victim to), but still, sometimes, curiosity gets the best of me and
+I just have to know.  When I am writing in Python, I use the &lt;code&gt;timeit&lt;/code&gt;
+&lt;a href=&#34;https://docs.python.org/3/library/timeit.html?highlight=timeit#module-timeit&#34; target=&#34;_blank&#34;&gt;module&lt;/a&gt;
+to measure code execution.  This handy module has two main utility functions:
+&lt;code&gt;timeit&lt;/code&gt; and &lt;code&gt;repeat&lt;/code&gt;.&lt;/p&gt;
 
-&lt;p&gt;&lt;code&gt;timeit&lt;/code&gt; will run a piece of code &lt;code&gt;n&lt;/code&gt; times while measuring the execution time of each repetition.  It then gives back the lowest time, which is arguably the time needed to run the code when nothing else on the system is interfering.  Of course, when the code will be run, other things will want CPU time alongside your program and the OS will have to balance it all, but &lt;em&gt;usually&lt;/em&gt;, that should not be taken into account when doing micro-benchmarks.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;timeit&lt;/code&gt; will run a piece of code &lt;code&gt;n&lt;/code&gt; times while measuring the execution time of
+each repetition.  It then gives back the lowest time, which is arguably the time
+needed to run the code when nothing else on the system is interfering.  Of course,
+when the code will be run, other things will want CPU time alongside your program
+and the OS will have to balance it all, but &lt;em&gt;usually&lt;/em&gt;, that should not be taken
+into account when doing micro-benchmarks.&lt;/p&gt;
 
-&lt;p&gt;&lt;code&gt;repeat&lt;/code&gt; will again run a piece of code &lt;code&gt;n&lt;/code&gt; times, but will repeat that experiment &lt;code&gt;r&lt;/code&gt; times, returning a list with the lowest execution time of each repetition of the experiment.  The following snippet shows how to use both of them in code.&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;repeat&lt;/code&gt; will again run a piece of code &lt;code&gt;n&lt;/code&gt; times, but will repeat that experiment
+&lt;code&gt;r&lt;/code&gt; times, returning a list with the lowest execution time of each repetition of
+the experiment.  The following snippet shows how to use both of them in code.&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;from timeit import timeit, repeat
 
@@ -789,11 +1025,29 @@ for idx in range( r ):
     times_timeit.append( timeit( &amp;quot;def Fn( x ): return x**2;myFn( 4 )&amp;quot;, number = n ) )
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;There are two other ways to use the &lt;code&gt;timeit&lt;/code&gt; module, namely via the command line with the executable module syntax and using an interactive Python shell like &lt;a href=&#34;https://ipython.org/&#34; target=&#34;_blank&#34;&gt;iPython&lt;/a&gt; which has the magic function &lt;code&gt;%timeit&lt;/code&gt;.  I won&amp;rsquo;t cover those subjects here.&lt;/p&gt;
+&lt;p&gt;There are two other ways to use the &lt;code&gt;timeit&lt;/code&gt; module, namely via the command line
+with the executable module syntax and using an interactive Python shell like
+&lt;a href=&#34;https://ipython.org/&#34; target=&#34;_blank&#34;&gt;iPython&lt;/a&gt; which has the magic function &lt;code&gt;%timeit&lt;/code&gt;.  I won&amp;rsquo;t
+cover those subjects here.&lt;/p&gt;
 
 &lt;h3 id=&#34;trying-it-out-in-c-time-it&#34;&gt;Trying it out in C++ : time_it&lt;/h3&gt;
 
-&lt;p&gt;The thing is, I don&amp;rsquo;t always do things in Python and I wanted to have a function similar to &lt;code&gt;timeit&lt;/code&gt; which would allow me to measure the execution time of a function or piece of code in C++.  It turns out that with C++14 (don&amp;rsquo;t know if C++11 is sufficient, but C++17/C++1z will make it easier I think), it is possible to get close to it.  When I got the idea, I started to think about the &lt;a href=&#34;http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4169.html&#34; target=&#34;_blank&#34;&gt;proposed&lt;/a&gt; &lt;code&gt;std::invoke&lt;/code&gt; function that should (or has?) make it into the next standard.  This function template takes a function, it&amp;rsquo;s arguments and invokes it.  This is pretty close to what I need.  Coupling the facilities of &lt;code&gt;std::chrono&lt;/code&gt; with that function could actually get me pretty close to what I want.  Because some compilers do not yet have an implementation of &lt;code&gt;std::invoke&lt;/code&gt;, I had to first find one or write one.  I decided to use the implementation found on &lt;a href=&#34;http://en.cppreference.com/w/cpp/utility/functional/invoke&#34; target=&#34;_blank&#34;&gt;cppreference.com&lt;/a&gt;.  But let&amp;rsquo;s pretend that std::invoke is available.  Then, one can write the function template &lt;code&gt;time_it&lt;/code&gt;&lt;sup&gt;[1]&lt;/sup&gt; using &lt;code&gt;std::invoke&lt;/code&gt; and &lt;code&gt;std::chrono&lt;/code&gt;.  This is the resulting function for those who do not want to read the steps I went through:&lt;/p&gt;
+&lt;p&gt;The thing is, I don&amp;rsquo;t always do things in Python and I wanted to have a function
+similar to &lt;code&gt;timeit&lt;/code&gt; which would allow me to measure the execution time of a
+function or piece of code in C++.  It turns out that with C++14 (don&amp;rsquo;t know if
+C++11 is sufficient, but C++17/C++1z will make it easier I think), it is possible
+to get close to it.  When I got the idea, I started to think about the
+&lt;a href=&#34;http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4169.html&#34; target=&#34;_blank&#34;&gt;proposed&lt;/a&gt;
+&lt;code&gt;std::invoke&lt;/code&gt; function that should (or has?) make it into the next standard.  This
+function template takes a function, it&amp;rsquo;s arguments and invokes it.  This is pretty
+close to what I need.  Coupling the facilities of &lt;code&gt;std::chrono&lt;/code&gt; with that function
+could actually get me pretty close to what I want.  Because some compilers do not
+yet have an implementation of &lt;code&gt;std::invoke&lt;/code&gt;, I had to first find one or write one.
+I decided to use the implementation found on
+&lt;a href=&#34;http://en.cppreference.com/w/cpp/utility/functional/invoke&#34; target=&#34;_blank&#34;&gt;cppreference.com&lt;/a&gt;.
+But let&amp;rsquo;s pretend that std::invoke is available.  Then, one can write the function
+template &lt;code&gt;time_it&lt;/code&gt;&lt;sup&gt;[1]&lt;/sup&gt; using &lt;code&gt;std::invoke&lt;/code&gt; and &lt;code&gt;std::chrono&lt;/code&gt;.  This is
+the resulting function for those who do not want to read the steps I went through:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;template&amp;lt;
    unsigned int repeat_invoke = 1000,
@@ -839,17 +1093,32 @@ time_it( F&amp;amp;&amp;amp; f, ArgTypes&amp;amp;&amp;amp;... args )
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;I skipped the includes in this code snippet.  I am not pretending this code is exception safe, thread safe or any other kind of safe there is.  I am not suggesting anybody else should use it.  It&amp;rsquo;s simply something I find useful.&lt;/p&gt;
+&lt;p&gt;I skipped the includes in this code snippet.  I am not pretending this code is
+exception safe, thread safe or any other kind of safe there is.  I am not
+suggesting anybody else should use it.  It&amp;rsquo;s simply something I find useful.&lt;/p&gt;
 
 &lt;h3 id=&#34;how-i-got-there&#34;&gt;How I got there&lt;/h3&gt;
 
-&lt;p&gt;Basically, aside from the boiler plate stuff, the function is one that takes another function and its parameters as input, and then outputs the minimum time taken to execute the code.  The initial declaration could be written as follows:&lt;/p&gt;
+&lt;p&gt;Basically, aside from the boiler plate stuff, the function is one that takes
+another function and its parameters as input, and then outputs the minimum time
+taken to execute the code.  The initial declaration could be written as follows:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;template&amp;lt; typename F, typename... ArgTypes &amp;gt;
 double time_it( F&amp;amp;&amp;amp; f, ArgTypes&amp;amp;&amp;amp;... args );
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;This definition uses variadic templates.  You can find information on variadic templates on &lt;a href=&#34;https://en.wikipedia.org/wiki/Variadic_template&#34; target=&#34;_blank&#34;&gt;various&lt;/a&gt; &lt;a href=&#34;http://en.cppreference.com/w/cpp/language/parameter_pack&#34; target=&#34;_blank&#34;&gt;sites&lt;/a&gt;.  The problem I had with that first iteration is that I could not specify the number of repetitions or the number of times I wanted to run the timing experiment (equivalent to the &lt;code&gt;n&lt;/code&gt; and &lt;code&gt;r&lt;/code&gt; parameters of Python&amp;rsquo;s &lt;code&gt;timeit&lt;/code&gt;).  I had to find a way to do that which would allow for default values as well, since I did not want to specify those arguments every time I call the function.  To be able to use default values in C++, the defaulted parameters have to be last (no keyword arguments in C++ land).  That presented a problem because I also have to have a parameter pack.  So to work around that, I introduced two defaulted template arguments like this:&lt;/p&gt;
+&lt;p&gt;This definition uses variadic templates.  You can find information on variadic
+templates on &lt;a href=&#34;https://en.wikipedia.org/wiki/Variadic_template&#34; target=&#34;_blank&#34;&gt;various&lt;/a&gt;
+&lt;a href=&#34;http://en.cppreference.com/w/cpp/language/parameter_pack&#34; target=&#34;_blank&#34;&gt;sites&lt;/a&gt;.  The problem
+I had with that first iteration is that I could not specify the number of
+repetitions or the number of times I wanted to run the timing experiment
+(equivalent to the &lt;code&gt;n&lt;/code&gt; and &lt;code&gt;r&lt;/code&gt; parameters of Python&amp;rsquo;s &lt;code&gt;timeit&lt;/code&gt;).  I had to find
+a way to do that which would allow for default values as well, since I did not
+want to specify those arguments every time I call the function.  To be able to
+use default values in C++, the defaulted parameters have to be last (no keyword
+arguments in C++ land).  That presented a problem because I also have to have a
+parameter pack.  So to work around that, I introduced two defaulted template
+arguments like this:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;template&amp;lt;
    unsigned int repeat_invoke = 1000,
@@ -861,16 +1130,32 @@ std::array&amp;lt; double, repeat_meas &amp;gt;
 time_it( F&amp;amp;&amp;amp; f, ArgTypes&amp;amp;&amp;amp;... args );
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Sorry for the reformatting of the template declaration.  I must admit I struggle to have a consistent formatting for templates.  I find nothing is completely satisfying.  I should probably just use &lt;a href=&#34;http://clang.llvm.org/docs/ClangFormat.html&#34; target=&#34;_blank&#34;&gt;Clang Format&lt;/a&gt;.  Anyhow, back to my function.  The addition of the two template arguments allowed me to change the return type to an array and I now have the functionality I want: I can specify, albeit as template parameters, the number of repetitions and the number of invocations at the call site.  All that was left to do was write the timing code, since the function invocation itself is simply:&lt;/p&gt;
+&lt;p&gt;Sorry for the reformatting of the template declaration.  I must admit I struggle
+to have a consistent formatting for templates.  I find nothing is completely
+satisfying.  I should probably just use
+&lt;a href=&#34;http://clang.llvm.org/docs/ClangFormat.html&#34; target=&#34;_blank&#34;&gt;Clang Format&lt;/a&gt;.  Anyhow, back to my
+function.  The addition of the two template arguments allowed me to change the
+return type to an array and I now have the functionality I want: I can specify,
+albeit as template parameters, the number of repetitions and the number of
+invocations at the call site.  All that was left to do was write the timing code,
+since the function invocation itself is simply:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;std::invoke( std::forward&amp;lt;F&amp;gt;(f), std::forward&amp;lt;ArgTypes&amp;gt;(args)... );
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;The use of &lt;code&gt;std::forward&lt;/code&gt; in the code here is for efficiency.  The timing code is based on &lt;code&gt;std::chrono::high_resolution_clock&lt;/code&gt;.  I chose to simply record the time before the invocation with &lt;code&gt;std::chrono::high_resolution_clock::now()&lt;/code&gt; and do the same after.  The difference is the elapsed time.  The choice of the clock could be discussed.  The most important thing is for the clock to be steady.&lt;/p&gt;
+&lt;p&gt;The use of &lt;code&gt;std::forward&lt;/code&gt; in the code here is for efficiency.  The timing code is
+based on &lt;code&gt;std::chrono::high_resolution_clock&lt;/code&gt;.  I chose to simply record the time
+before the invocation with &lt;code&gt;std::chrono::high_resolution_clock::now()&lt;/code&gt; and do the
+same after.  The difference is the elapsed time.  The choice of the clock could
+be discussed.  The most important thing is for the clock to be steady.&lt;/p&gt;
 
 &lt;h3 id=&#34;example-test&#34;&gt;Example / test&lt;/h3&gt;
 
-&lt;p&gt;I have written a function which will make the current thread sleep for ten milliseconds.  Then, I have used my new &lt;code&gt;time_it&lt;/code&gt; function to time the execution of the defined function.  The code is reproduced here and actually serves as a usage example.  There are also two calls with a lambda function, one taking arguments.&lt;/p&gt;
+&lt;p&gt;I have written a function which will make the current thread sleep for ten
+milliseconds.  Then, I have used my new &lt;code&gt;time_it&lt;/code&gt; function to time the execution
+of the defined function.  The code is reproduced here and actually serves as a
+usage example.  There are also two calls with a lambda function, one taking
+arguments.&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-cpp&#34;&gt;void my_fn()
 {
@@ -933,19 +1218,49 @@ exp 4: [ 5.01679, 5.01788, 5.01327, 5.01883, 5.02777, 5.02198, 5.01831, 5.01463 
 exp 5: [ 55, 55, 55 ]
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;which, for the four first cases, is slightly more than 10ms and is what was expected.  The expected value for the experiment labeled 4 is slightly higher than 5ms and for the last lambda, it should be in the nanoseconds range, which it is.  Of course, the constant value is suspicious and probably means the actual value is actually lower, but the &lt;code&gt;time_it&lt;/code&gt; overhead and the clock precision is so that nothing below the 55ns value can be measured on my machine.  I have not determined the error bar on the time measurement.  This is a complex subject and much more work would be needed to test for that.  One other thing I have not tried in this example is the timing of a member function, but it should work.&lt;/p&gt;
+&lt;p&gt;which, for the four first cases, is slightly more than 10ms and is what was
+expected.  The expected value for the experiment labeled&amp;nbsp;4 is slightly higher
+than&amp;nbsp;5&amp;nbsp;ms and for the last lambda, it should be in the nanoseconds range,
+which it is.  Of course, the constant value is suspicious and probably means the
+actual value is actually lower, but the &lt;code&gt;time_it&lt;/code&gt; overhead and the clock precision
+is so that nothing below the 55ns value can be measured on my machine.  I have not
+determined the error bar on the time measurement.  This is a complex subject and
+much more work would be needed to test for that.  One other thing I have not tried
+in this example is the timing of a member function, but it should work.&lt;/p&gt;
 
 &lt;h3 id=&#34;what-is-impossible&#34;&gt;What is impossible&lt;/h3&gt;
 
-&lt;p&gt;There are things I have found are not possible with the function as it stands.  One of them is the inability to pass &lt;code&gt;time_it&lt;/code&gt; a template function as an argument without specifying the template arguments of the passed in (or timed) function.  I might be wrong, but I have not found a way to do that.  Explicit argument passing is tedious and so &lt;code&gt;time_it&lt;/code&gt; might not be very useful in those cases.&lt;/p&gt;
+&lt;p&gt;There are things I have found are not possible with the function as it stands.
+One of them is the inability to pass &lt;code&gt;time_it&lt;/code&gt; a template function as an argument
+without specifying the template arguments of the passed in (or timed) function.
+I might be wrong, but I have not found a way to do that.  Explicit argument
+passing is tedious and so &lt;code&gt;time_it&lt;/code&gt; might not be very useful in those cases.&lt;/p&gt;
 
-&lt;p&gt;One other capability Python&amp;rsquo;s &lt;code&gt;timeit&lt;/code&gt; has that this one does not is the ability to accept setup code which is executed before the experiment is run.  I am not sure how useful that would be in the context of C++.  Of course, I can&amp;rsquo;t imagine what others would use &lt;code&gt;time_it&lt;/code&gt; for, so it might be useful even though I can&amp;rsquo;t see it, but I am not writing the STL!  It&amp;rsquo;s just that in my view, since C++ is compiled and not interpreted, &lt;code&gt;time_it&lt;/code&gt; will still require a main function and an executable to run, unlike Python&amp;rsquo;s &lt;code&gt;timeit&lt;/code&gt; which can be run on the fly from the command line to test something out.  To my mind, the setup code can then be written in the main function to no real cost compared to having it done in the &lt;code&gt;time_it&lt;/code&gt; function.  That being said, I believe it would be possible to accept a setup function by making the input of &lt;code&gt;time_it&lt;/code&gt; two tuples of function and arguments, the first being the function to test and the second being the setup function.  I am just not 100% certain that it would be useful and I cannot say for sure that it can be done because I have not tried implementing it.  In my opinion, it would make calling the function without setup code much uglier.  Maybe an overload taking two tuples and the current version could live together and that would allow the functionality at &amp;ldquo;no cost&amp;rdquo;.&lt;/p&gt;
+&lt;p&gt;One other capability Python&amp;rsquo;s &lt;code&gt;timeit&lt;/code&gt; has that this one does not is the ability
+to accept setup code which is executed before the experiment is run.  I am not
+sure how useful that would be in the context of C++.  Of course, I can&amp;rsquo;t imagine
+what others would use &lt;code&gt;time_it&lt;/code&gt; for, so it might be useful even though I can&amp;rsquo;t
+see it, but I am not writing the STL!  It&amp;rsquo;s just that in my view, since C++ is
+compiled and not interpreted, &lt;code&gt;time_it&lt;/code&gt; will still require a main function and an
+executable to run, unlike Python&amp;rsquo;s &lt;code&gt;timeit&lt;/code&gt; which can be run on the fly from the
+command line to test something out.  To my mind, the setup code can then be
+written in the main function to no real cost compared to having it done in the
+&lt;code&gt;time_it&lt;/code&gt; function.  That being said, I believe it would be possible to accept a
+setup function by making the input of &lt;code&gt;time_it&lt;/code&gt; two tuples of function and
+arguments, the first being the function to test and the second being the setup
+function.  I am just not 100% certain that it would be useful and I cannot say
+for sure that it can be done because I have not tried implementing it.  In my
+opinion, it would make calling the function without setup code much uglier.
+Maybe an overload taking two tuples and the current version could live together
+and that would allow the functionality at &amp;ldquo;no cost&amp;rdquo;.&lt;/p&gt;
 
 &lt;p&gt;Anyhow, those are my thoughts on the matter for now.&lt;/p&gt;
 
 &lt;h3 id=&#34;notes&#34;&gt;Notes&lt;/h3&gt;
 
-&lt;p&gt;&lt;sup&gt;[1]&lt;/sup&gt; I chose the name with an underscore to differentiate the function from its Python counterpart since my version does not do &lt;em&gt;exactly&lt;/em&gt; all the stuff the python version can!&lt;/p&gt;
+&lt;p&gt;&lt;sup&gt;[1]&lt;/sup&gt; I chose the name with an underscore to differentiate the function
+from its Python counterpart since my version does not do &lt;em&gt;exactly&lt;/em&gt; all the stuff
+the python version can!&lt;/p&gt;
 </description>
       </item>
       
