@@ -8,10 +8,19 @@
     <language>en-us</language>
     <managingEditor>codeattempts@gmail.com</managingEditor>
     <webMaster>codeattempts@gmail.com</webMaster>
-    <lastBuildDate>Sat, 19 May 2018 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 05 Aug 2018 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="https://ghlecl.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Python&#39;s range in C&#43;&#43;</title>
+      <link>https://ghlecl.github.io/posts/range_function/</link>
+      <pubDate>Sun, 05 Aug 2018 00:00:00 +0000</pubDate>
+      <author>codeattempts@gmail.com</author>
+      <guid>https://ghlecl.github.io/posts/range_function/</guid>
+      <description>Exploring loops: Python&amp;rsquo;s range in C++ In spite of what Sean Parent would like (i.e. no raw loops ;-) ), loops are a common control flow in programming. So common that most languages have more than one loop syntax: for loop, while loop, do while loop&amp;hellip; Given their prevalence, loops might seem uninteresting, but when I decided to look into creating a range function[1] for C++ which would behave like Python&amp;rsquo;s range object, I learned a thing or two and decided to write them down.</description>
+    </item>
     
     <item>
       <title>Mixed types arithmetic in C&#43;&#43;</title>
