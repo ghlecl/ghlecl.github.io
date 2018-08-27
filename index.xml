@@ -81,10 +81,10 @@ struct my_op {
 std::for_each( lst.begin(), lst.end(), my_op() );
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Those work, but they have a few drawbacks, amongst which you can find 1) being
-verbose and 2) not working with built-in arrays.  Compare that to other languages
-where the syntax for iterating over a container is more concise and more
-universally applied, like Python for instance:&lt;/p&gt;
+&lt;p&gt;Those work, but they have a few drawbacks, amongst which you can find being
+verbose &lt;del&gt;and 2) not working with built-in arrays&lt;/del&gt;&lt;sup&gt;[3]&lt;/sup&gt;.
+Compare that to other languages where the syntax for iterating over a container
+is more concise and more universally applied, like Python for instance:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-python&#34;&gt;a = [ 0, 1, 2, 3, 4 ]
 for x in a:
@@ -261,7 +261,7 @@ feature/proposal to even be considered, for better or worse.&lt;/p&gt;
 &lt;/ul&gt;
 
 &lt;p&gt;I set out to build a function (or object) in C++.  In order to do that, I first
-had to understand the range-based for loop&lt;sup&gt;[3]&lt;/sup&gt;.&lt;/p&gt;
+had to understand the range-based for loop&lt;sup&gt;[4]&lt;/sup&gt;.&lt;/p&gt;
 
 &lt;h2 id=&#34;writing-the-code&#34;&gt;Writing the code&lt;/h2&gt;
 
@@ -291,7 +291,7 @@ in).  The &lt;code&gt;loop_statement&lt;/code&gt; is essentially the body of the
 style for loop.  The code above will be used by the compiler to generate
 something similar to the regular iterator loop shown in the
 &lt;a href=&#34;#iterating-over-containers&#34; target=&#34;_blank&#34;&gt;first section&lt;/a&gt;.  The code looks like
-this&lt;sup&gt;[4]&lt;/sup&gt;:&lt;/p&gt;
+this&lt;sup&gt;[5]&lt;/sup&gt;:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;auto&amp;amp;&amp;amp; rng = for_range_initializer;
 auto beg = begin( rng );
@@ -545,7 +545,7 @@ even at a low optimization level (&lt;code&gt;O1&lt;/code&gt;).  This means GCC 
 see through the abstractions and produce the same output whether this range
 construct or a hand coded C style for loop is used.  When I saw that, I though
 it was excellent news, and decided to test with two other commonly used
-compliers: Clang and MSVC&lt;sup&gt;[5]&lt;/sup&gt;.&lt;/p&gt;
+compliers: Clang and MSVC&lt;sup&gt;[6]&lt;/sup&gt;.&lt;/p&gt;
 
 &lt;p&gt;Using Clang, I first got disappointing results: a higher optimization level (&lt;code&gt;O2&lt;/code&gt;)
 was necessary to obtain the same result.  Thinking about why that was, I decided
@@ -871,13 +871,19 @@ ends up in the standard.&lt;/p&gt;
 &lt;p&gt;&lt;sup&gt;[2]&lt;/sup&gt; Link pointed to most recent release on the date of writing.
 Might not work on future dates.&lt;/p&gt;
 
-&lt;p&gt;&lt;sup&gt;[3]&lt;/sup&gt; At first, like most I would think, I actually first asked a search
+&lt;p&gt;&lt;sup&gt;[3]&lt;/sup&gt;Edit 2018-08-16: Turns out even in C++98, it works for built-in
+arrays, albeit not with the &lt;code&gt;std::begin()&lt;/code&gt; and &lt;code&gt;std::end()&lt;/code&gt; free functions given
+they were introduced in C++11.  You can simply pass the array &amp;ldquo;bounds&amp;rdquo; (i.e. the
+array variable and the array variable plus the length) to the standard algorithm
+(tested with std::sort) and it works.  You learn every day!&lt;/p&gt;
+
+&lt;p&gt;&lt;sup&gt;[4]&lt;/sup&gt; At first, like most I would think, I actually first asked a search
 engine and that is how I found &lt;a href=&#34;https://www.justsoftwaresolutions.co.uk/cplusplus/generating_sequences.html&#34; target=&#34;_blank&#34;&gt;Anthony&amp;rsquo;s post&lt;/a&gt;
 on the subject.  This was a great starting point.&lt;/p&gt;
 
-&lt;p&gt;&lt;sup&gt;[4]&lt;/sup&gt; Adapted from the C++17 standard draft.&lt;/p&gt;
+&lt;p&gt;&lt;sup&gt;[5]&lt;/sup&gt; Adapted from the C++17 standard draft.&lt;/p&gt;
 
-&lt;p&gt;&lt;sup&gt;[5]&lt;/sup&gt; In the course of writing this article, I realized that a version
+&lt;p&gt;&lt;sup&gt;[6]&lt;/sup&gt; In the course of writing this article, I realized that a version
 of the Intel compiler was also available on Compiler Explorer and thus decided
 to look at the assembly generated with this compiler.  It turns out it takes
 optimization level 3 for the code to give the same result as the hand-coded loop
