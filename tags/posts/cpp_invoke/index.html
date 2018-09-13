@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Ghyslain Leclerc">
+    <meta name="description" content="Personnal notes on code.">
+    <meta name="generator" content="Hugo 0.48" />
+
+    
+    <title>Invoking a callable in C&#43;&#43; &middot; @ghlecl’s Code Attempts</title>
+
+    <link rel="stylesheet" href="https://ghlecl.github.io/css/weblog.css" media="screen" charset="utf-8" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/1.2.14/css/lightgallery.min.css" type="text/css" />
+    
+<link rel="stylesheet" href="https://ghlecl.github.io/css/prism.css">
+
+
+    
+	<link href="https://ghlecl.github.io/index.xml" rel="alternate" type="application/rss+xml" title="Code Attempts" />
+	
+  </head>
+  <body class="site">
+
+<header>
+  <nav>
+    <h1><a href="https://ghlecl.github.io/">@ghlecl</a>’s Code Attempts.</h1>
+    <div class="menu">
+      
+      <ul>
+        
+            <li>
+              <a href="https://ghlecl.github.io/posts/">Posts</a>
+              
+                <a href="https://ghlecl.github.io/posts/index.xml"><img src="https://ghlecl.github.io/img/rss.svg" class="rss-icon" /></a>
+              
+            </li>
+        
+            <li>
+              <a href="https://ghlecl.github.io/microposts/">Microposts</a>
+              
+                <a href="https://ghlecl.github.io/microposts/index.xml"><img src="https://ghlecl.github.io/img/rss.svg" class="rss-icon" /></a>
+              
+            </li>
+        
+        <li><a href="https://ghlecl.github.io/about">About</a></li>
+      </ul>
+    </div>
+  </nav>
+</header>
+
+
+  <main class="content">
+
+    <article class="post">
+      
+        <h2><a rel="full-article" href="https://ghlecl.github.io/posts/cpp_invoke/">Invoking a callable in C&#43;&#43;</a></h2>
+      
+
+      <div class="postmeta">Posted on <time datetime="2018-09-13 00:00:00 &#43;0000 UTC" pubdate="">September 13, 2018</time> in
+        <span class="categories">
+          
+        </span>
+      </div>
+
+      <p>
+        
+
+<h1 id="invoking-a-callable-in-c">Invoking a callable in C++</h1>
+
+<p>This is my exploration of the <a href="https://en.cppreference.com/w/cpp/utility/functional/invoke" target="_blank"><code>std::invoke</code></a> utility of C++17.
+I started with something <em>vaguely</em> related (which I am discussing here) and
+ended up reading the standard library implementation of <code>std::invoke</code> (and that
+of Google&rsquo;s <a href="https://abseil.io/" target="_blank">Abseil</a> library).  The funny thing is that in
+the end, I decided I did not really need any of it for my original motivation,
+but I did gain some knowledge along the way, so worth the time!</p>
+
+<h2 id="my-original-motivation">My original motivation</h2>
+
+<p>Even though <a href="https://herbsutter.com/2011/10/07/why-no-container-based-algorithms" target="_blank">there are reasons</a>
+not to have container based algorithms in the C++ standard library (upcoming
+ranges being one more reason), in my code, I find my main use case for the
+algorithms is still to work on the whole container.  Because of that, I was
+looking into ways to get whole container overloads for the algorithms.  In that
+endeavor, I stumbled upon <a href="https://ideone.com/aruf06" target="_blank">this</a> solution.  In the
+usage examples at the bottom of the code, one finds two usage syntaxes:</p>
+
+<pre><code class="language-c++">apply_on( bobs, for_each, std::mem_fn( &amp;Bob::stuff) );
+for_each_on( bobs, std::mem_fn( &amp;Bob::stuff ) );
+</code></pre>
+
+<p>where the <code>for_each_on</code> is obviously not in the <code>std</code> namespace.  This is very
+close to what I am looking for, which is a function with the name <code>for_each</code>
+that will simply forward its call to the <code>std::for_each</code>, but will work on the
+whole container rather than asking for two iterators.  Something that would look
+like that:</p>
+
+<pre><code class="language-c++">for_each( bobs, &amp;Bob::stuff );
+</code></pre>
+
+<p>where this <code>for_each</code> is not the one in namespace <code>std</code> (but shares its name
+with it as opposed to the <code>for_each_on</code> function in the solution I found online).</p>
+
+<p>In adapting/inserting this solution to my code, I realized that the custom
+<code>apply_on</code> function I found online is pretty much a particular case of C++17&rsquo;s
+<a href="https://en.cppreference.com/w/cpp/utility/functional/invoke" target="_blank"><code>std::invoke</code></a>.
+Since I am not interested in directly using the <code>apply_on</code> function as shown in
+the examples of the online solution, I thought I should just adapt it to use
+<code>std::invoke</code>.</p>
+
+<p>Unfortunately, at work, not all the external libraries that our projects depend
+on have transitioned to C++17.  Therefore, to use <code>std::invoke</code>, I needed a
+working C++11 implementation (which would of course then not be in the <code>std</code>
+namespace, but I digress). Turns out it is not that hard to find <a href="https://github.com/tomaszkam/proposals/tree/master/invoke" target="_blank">a</a>
+<a href="https://github.com/Rapptz/Gears/blob/master/gears/functional/invoke.hpp" target="_blank">C++11</a>
+<a href="https://github.com/abseil/abseil-cpp/blob/master/absl/base/internal/invoke.h" target="_blank">implementation</a>.</p>
+
+<p>That said, before using any of them, I wanted to make sure I understand the
+concepts so that I can provide support if necessary.  Thus, I set out to read
+and understand those implementations.  In the process, I came up with my own,
+which I am discussing here.  I do not pretend this implementation is superior or
+even on par with the others I have seen (and certainly not with the standard
+library implementations out there), but from the tests I have made (comparing
+with Clang&rsquo;s implementation on a C++17 compiler I have access to), it seems to
+be as capable (probably did not think of every conceivable test).  It might,
+however, be very slow to compile and suboptimal.</p>
+
+<h2 id="syntax-es-of-a-call-in-c">Syntax(es) of a &ldquo;call&rdquo; in C++</h2>
+
+<p>Before I embarked on this journey, I had never needed to make function calls
+through function pointers or member pointers.  I have had the luxury/luck of
+working only on newer projects that did not involve that many callbacks.  Lambdas
+have mostly always been available to me, so I was not familiar with the various
+call syntaxes of function pointers, member pointers and the like.  Since I could
+use lambdas, when I needed to call some member function on all the elements of a
+vector, for instance, I just created a lambda doing exactly that and never
+considered using a pointer to the member.  Thus, my first hurdle was
+understanding the problem space of calling something in C++.</p>
+
+<p>Although the section on the magical <code>INVOKE</code> entity<sup>[1]</sup> in the C++ 17
+standard (which is section <em>23.14.3&nbsp;Requirements&nbsp;([<em>func.require</em>])</em>)
+has seven bullet points, when looking at the bigger picture, I think it is a
+useful approximation to summarize by saying there are three call syntaxes in C++:</p>
+
+<ul>
+<li>function call syntax</li>
+<li>member function pointer call syntax</li>
+<li>member object pointer call syntax</li>
+</ul>
+
+<p>where member object is roughly standardese for data member. Translated in pseudo
+code, the three syntaxes above look like this:</p>
+
+<pre><code class="language-c++">invocable( arguments );           // function syntax
+object.*invocable( arguments );   // member function pointer syntax
+object.*invocable;                // member object pointer syntax
+</code></pre>
+
+<p>The first syntax can be applied to any invocable that is not a member, be it a
+regular function, a function pointer, a lambda or a <code>struct</code> defining a call
+operator (<code>operator()</code>).  The two others are used when dealing with pointers to
+member.  Whether one is dealing with a pointer to member function or to member
+object, the standard allows using said pointer to call &ldquo;into&rdquo; an object of a
+related type either directly, through a <code>std::reference_wrapper</code> or through a
+pointer.  In other words, there is a clause in the standard for each of the
+following calls (again in pseudo code):</p>
+
+<pre><code class="language-c++">(object.*invocable)( arguments )         // object
+(wrapper.get().*invocable)( arguments )  // std::reference_wrapper
+(*pointer.*invocable)( arguments )       // pointer to object
+
+object.*invocable           // object
+wrapper.get().*invocable    // std::reference_wrapper
+*pointer.*invocable         // pointer to object
+</code></pre>
+
+<p>Note that the parentheses in the first three lines are necessary because the
+function call operator (i.e. <code>operator()</code>) has lower
+<a href="https://en.cppreference.com/w/cpp/language/operator_precedence" target="_blank">precedence</a>
+than the pointer-to-member operator (i.e. <code>operator.*</code>).  If the parentheses
+were not there, i.e. if the first line were written
+<code>object.*invocable( arguments )</code> instead of the current syntax, then the order
+of operations would be <code>invocable( arguments )</code> before <code>object.*invocable</code>, and
+that would error out: the compiler would rightfully complain that the type of
+<code>invocable</code> is not a callable because it would not access the member before
+trying to call it.</p>
+
+<p>Adding the general function call syntax to the list above, one gets a total of
+seven call syntaxes, one per bullet point of the standard.  In the end, a
+conforming implementation of <code>std::invoke</code> must provide this single function
+template which will, based on the type of its parameters and arguments, use the
+correct call syntax for the situation.  Getting there is not as easy as it seems
+(underestimating implementation difficulty is a recurring theme for me&hellip;).  In
+all the C++11 implementations I have seen, it involves at least
+<a href="https://en.cppreference.com/w/cpp/language/sfinae" target="_blank">SFINAE</a> and
+<a href="https://en.cppreference.com/w/cpp/language/function_template
+#Function_template_overloading" target="_blank">function template partial ordering</a>.
+In C++17, using <a href="https://en.cppreference.com/w/cpp/language/if#Constexpr_If" target="_blank">constexpr if</a>, it is possible
+to have a simpler implementation (see
+<a href="https://en.cppreference.com/w/" target="_blank">cppreference.com</a> <a href="https://en.cppreference.com/w/cpp/utility/functional/invoke
+#Possible_implementation" target="_blank">possible implementation</a>),
+but, as mentioned, that was not a possibility for me.  Before reading on (if you
+are still interested), I would suggest reading up on SFINAE (specifically the
+<a href="https://en.cppreference.com/w/cpp/types/enable_if" target="_blank"><code>std::enable_if</code></a>
+technique/idiom), and maybe a little on function template partial ordering.  I
+do not explain the former at all, while I do say a little bit on the latter as I
+have discovered it while understanding the implementations of <code>invoke</code> and this
+blog serves a bit as my note-taking!</p>
+
+<h2 id="c-17-s-std-invoke">C++17&rsquo;s <code>std::invoke</code></h2>
+
+<h3 id="the-naïve-starting-point">The naïve starting point</h3>
+
+<p>Considering only the function call syntax, the function template needed can be
+as simple as:</p>
+
+<pre><code class="language-c++">template&lt; typename Invocable, typename... Args &gt;
+auto invoke( Invocable invocable, Args... args )
+   -&gt; decltype( invocable( args... ) ) {
+   return invocable( args... );
+}
+</code></pre>
+
+<p>Although it will work for the function call syntax, this implementation is naïve,
+not taking into account argument passing efficiency (perfect forwarding) or
+<code>noexcept</code> specification.  It will also obviously fail for any other syntax in
+the list presented in the previous section.  We need to have other
+specializations or overloads which will handle the other call syntaxes.  Since
+it is a function template and not a class/struct template, it is not possible to
+partially specialize it.  I do not think it is possible to use full
+specialization to create the overload set needed, but I might be wrong.  That
+said, it is however possible to overload it and select the appropriate overload
+via SFINAE or function template partial ordering, which is what I have seen in
+most implementation, and what is explored next.</p>
+
+<h3 id="member-pointers">Member pointers</h3>
+
+<p>As written above, the <code>invoke</code> function will not work for member pointers.
+Different approaches can be taken to deal with this problem and allow the
+function to be called with other member pointers.  One way is to write an
+overload of the function which will not take just any invocable as an argument,
+but only member pointers.  This overload will still need to be a template to
+accommodate member pointers of any type and some mechanism is needed to insure
+that the template is selected only when called with a member pointer.  One way
+to achieve this is through <a href="https://en.cppreference.com/w/cpp/language/function_template#Function_template
+_overloading" target="_blank">function template partial ordering</a>, which is what most implementations that I have seen have used.
+Since I have been influenced by those implementations, I did the same.  There
+could have been alternatives, for instance SFINAE.<sup>[2]</sup>  That said, I
+went with partial ordering.  This concept relies on template parameters and
+function arguments being such that one function is considered more specialized
+than the other.  The algorithm for partial ordering is well explained in
+<a href="https://stackoverflow.com/a/17008568" target="_blank">this StackOverflow answer</a>.  As stated in
+the answer, a comment of the original question gives a pretty good description
+of the concept:</p>
+
+<blockquote>
+<p>Partial ordering basically checks in the parameters of two templates, if the
+parameter of one is more restrictive than the corresponding parameter of the
+other. If you have <code>f(T)</code> and <code>f(bar&lt;T&gt;)</code> (with <code>T</code> as a template parameter),
+then the first overload can take all possible arguments of the second
+overload, but the second overload can&rsquo;t take all possible arguments from the
+first overload - only those of the <code>bar&lt;T&gt;</code> form.</p>
+</blockquote>
+
+<p>Putting aside perfect forwarding and the <code>noexcept</code> specification for now
+(we&rsquo;ll come back to them in the end), an overload of the function template which
+uses function template partial ordering can be written like this:</p>
+
+<pre><code class="language-c++">template&lt; typename MemPtr, typename Obj, typename Arg1, typename... Args &gt;
+auto invoke( MemPtr Obj::* invocable, Arg1 arg1, Args... args )
+   -&gt; decltype( (arg1.*invocable)( args... ) ) {
+   return (arg1.*invocable)( args... );
+}
+</code></pre>
+
+<p>The template parameters are the member pointer type (<code>MemPtr</code>), the type pointed
+into by the member pointer (<code>Obj</code>), the object type the pointer is called on
+(<code>Arg1</code><sup>[3]</sup>) and the subsequent argument types (<code>Args...</code>), if any.
+For plain function pointers, this deduction will fail because the first function
+argument will not be a match, and the original overload will be selected.  For
+member pointers, the substitution will succeed and this overload will be
+considered more specialized, and it will be selected as intended.  Note again
+the parentheses around the <code>arg1.*invocable</code> both in the <code>decltype</code> and in the
+template body.  As mentioned in the previous section, those are mandatory.</p>
+
+<p>Although this template does work, in its current form, it will be selected
+whenever <code>invoke</code> is called with a member pointer as its first argument,
+even if the object you want to invoke the pointer on (the second argument to
+<code>invoke</code> which has type <code>Arg1</code>) is unrelated to the type the pointer points
+into (type <code>Obj</code>).  This is a problem because for arbitrary unrelated types,
+using the function pointer from one type on the other will fail to compile.
+To prevent this overload from being selected when the types are unrelated,
+SFINAE can be used.  To do this, a defaulted template parameter is added after
+the parameter pack and defaulted to <code>enable_if_t</code><sup>[4]</sup> with a predicate
+to filter out the cases that should not match. In this case, the predicate is
+<code>std::is_base_of&lt; Obj, Arg1 &gt;</code> and the solution looks like this:
+this:</p>
+
+<pre><code class="language-c++">template&lt;
+   typename MemPtr,
+   typename Obj,
+   typename Arg1,
+   typename... Args,
+   typename = enable_if_t&lt; std::is_base_of&lt; Obj, Arg1 &gt;::value &gt;
+&gt;
+auto invoke( MemPtr Obj::* invocable, Arg1 arg1, Args... args )
+   -&gt; decltype( (arg1.*invocable)( args... ) ) {
+   return (arg1.*invocable)( args... );
+}
+</code></pre>
+
+<p>where we can bikeshed my formatting some other time! 🙂  With this in place,
+this overload will not be selected when there is no inheritance (or identity)
+relationship between the member pointer object type (<code>Obj</code>) and the invoked-on
+object type (<code>Arg1</code>).</p>
+
+<p>Alright, this overload is a step in the right direction, but it still cannot be
+used with member <em>object</em> pointers.  That is because the call syntax is wrong:
+there must not be an argument list after the invocable.  If we want to have
+member object pointers working, there has to be a third overload with the
+appropriate call syntax.  If there is a third overload, there needs to be a way
+to select it when needed, and one cannot rely only on the function template
+partial ordering, since this will distinguish between callables and member
+pointers, but not between different member pointers, since they have the same
+syntax in the function argument list.  For this, we must rely once more on
+SFINAE and the standard library type traits, adding one more defaulted
+template parameter after the parameter pack for one of the overloads:</p>
+
+<pre><code class="language-c++">template&lt;
+   typename MemPtr,
+   typename Obj,
+   typename Arg1,
+   typename... Args,
+   typename = enable_if_t&lt; std::is_base_of&lt; Obj, Arg1 &gt;::value &gt;,
+   typename = enable_if_t&lt; std::is_member_function_pointer&lt; MemPtr Obj::* &gt;::value &gt;
+&gt;
+auto invoke( MemPtr Obj::* invocable, Arg1 arg1, Args... args )
+   -&gt; decltype( (arg1.*invocable)( args... ) ) {
+   return (arg1.*invocable)( args... );
+}
+
+template&lt;
+   typename MemPtr,
+   typename Obj,
+   typename Arg1,
+   typename = enable_if_t&lt; std::is_base_of&lt; Obj, Arg1 &gt;::value &gt;
+&gt;
+auto invoke( MemPtr Obj::* invocable, Arg1 arg1 )
+   -&gt; decltype( arg1.*invocable ) {
+   return arg1.*invocable;
+}
+</code></pre>
+
+<p>It should be noted that using the predicate <code>std::is_member_object_pointer</code> on
+the last overload instead would have also worked.  Now, the overload set of
+the three <code>invoke</code> functions defined above will be callable on anything that has
+the free function syntax, the member function pointer syntax or the member
+object (a.k.a. data member) pointer syntax, if the latter two are used directly
+with an object of the appropriate type (i.e. a type the member pointer points
+into or a type derived from it).  This constitutes only three of the seven
+syntaxes mandated by the standard.  None of the overloads will work if the
+object to call the member pointer on (<code>arg1</code>) is a <code>std::reference_wrapper</code> of
+such an object or a pointer to such an object.  Still some distance to go.</p>
+
+<h3 id="invoked-on-object-type">Invoked-on object type</h3>
+
+<p>If you have felt like this is getting verbose already, you are not going to like
+the rest of this blog post.  Basically, for each of the two last overloads,
+three variants are needed (the one already defined and two more):</p>
+
+<ul>
+<li>one that can be called with an object of the type the member pointer points
+ into (or a type derived from it),</li>
+<li>one that can be called with a <code>std::reference_wrapper</code> to an object of the
+ type the member pointer points into (or a type derived from it),</li>
+<li>or one that can be called on a pointer to an object of the type the member
+ pointer points into (or a type derived from it).</li>
+</ul>
+
+<p>Expressed in a more concrete way, considering the <code>invoke</code> overloads as defined
+above and using the argument types in their declarations, the previous text
+means that if <code>Arg1</code> is of the type <code>Obj</code> or a type derived from it, <code>invoke</code>
+should be able to call the member pointer with</p>
+
+<ul>
+<li>an object of type <code>Arg1</code>,</li>
+<li>an object of type <code>std::reference_wrapper&lt; Arg1 &gt;</code></li>
+<li>or an object or type <code>*Arg1</code>.</li>
+</ul>
+
+<p>As mentioned, the first case (i.e. object) is already written.  Let us tackle
+the last two.</p>
+
+<h4 id="std-reference-wrapper"><code>std::reference_wrapper</code></h4>
+
+<p>To handle the second case (i.e. <code>std::reference_wrapper</code>, one has to write a
+template working on member pointers which will be selected only when the second
+argument is a <code>std::reference_wrapper</code> to an object of an appropriate type, and
+SFINAE away otherwise.  Again, function template partial ordering is used to
+distinguish between function call syntax and member pointer syntax.  The new
+challenge is to find a way for the overload to be selected only when the
+second argument&rsquo;s type is a <code>std::reference_wrapper</code>.  This kind of requirement
+has been solved with <code>enable_if_t</code> in the previous sections and the same
+technique can be applied here: add a defaulted template parameter after the
+parameter pack and default it to <code>enable_if_t</code> with an appropriate predicate.</p>
+
+<pre><code class="language-c++">template&lt;
+   typename MemPtr,
+   typename Obj,
+   typename Arg1,
+   typename... Args,
+   typename = enable_if_t&lt; is_reference_wrapper&lt; Arg1 &gt;::value &gt;,
+   typename = enable_if_t&lt; std::is_member_function_pointer&lt; MemPtr Obj::* &gt;::value &gt;
+&gt;
+auto invoke( MemPtr Obj::* invocable, Arg1 arg1, Args... args )
+   -&gt; decltype( (arg1.get().*invocable)( args... ) ) {
+   return (arg1.get().*invocable)( args... );
+}
+
+template&lt;
+   typename MemPtr,
+   typename Obj,
+   typename Arg1,
+   typename = enable_if_t&lt; is_reference_wrapper&lt; Arg1 &gt;::value &gt;
+&gt;
+auto invoke( MemPtr Obj::* invocable, Arg1 arg1 )
+   -&gt; decltype( arg1.get().*invocable ) {
+   return arg1.get().*invocable;
+}
+</code></pre>
+
+<p>Unfortunately, there is no type trait in the standard library to determine if a
+type is a <code>std::reference_wrapper</code>.  Such a type trait can be written like this:</p>
+
+<pre><code class="language-c++">template &lt;class T&gt;
+struct is_reference_wrapper : std::false_type {};
+
+template &lt;class U&gt;
+struct is_reference_wrapper&lt; std::reference_wrapper&lt; U &gt; &gt; : std::true_type {};
+</code></pre>
+
+<p>which would probably be put in a <code>detail</code> namespace as this does not need to be
+used by user code.  With this type trait and the definition above, the calls
+where the invoked-on object type is <code>std::reference_wrapper</code> work.</p>
+
+<h4 id="pointer-to-object">Pointer to object</h4>
+
+<p>One would think the last case is handled the same way simply by replacing the
+type trait used in the <code>enable_if_t</code> by the
+<a href="https://en.cppreference.com/w/cpp/types/is_pointer" target="_blank"><code>std::is_pointer</code></a>
+type trait of the standard library, but in most implementations I have seen, it
+is not the case.  I believe the reason is that testing with <code>std::is_pointer</code>
+will yield <code>false</code> for smart pointers even if the invoked-on pointer syntax
+should actually work for them.<sup>[5]</sup>  One could test for every smart
+pointer in the standard library inside the predicate of the <code>enable_if_t</code>, but
+that would needlessly prevent user defined smart pointers to be used, and the
+standard library implementer (or the one implementing <code>invoke</code>) cannot reliably
+test for every user defined smart pointer.  Thus, the implementations usually
+check that they are neither in the first nor in the second cases (i.e. neither
+directly on an appropriately typed object nor on a <code>std::reference_wrapper</code> to
+one such object), and direct any other invoked-on object type to the last case.
+This can be done once more using defaulted template parameters after the
+parameter pack in combination with SFINAE, much like this:</p>
+
+<pre><code class="language-c++">template&lt;
+   typename MemPtr,
+   typename Obj,
+   typename Arg1,
+   typename... Args,
+   typename = enable_if_t&lt; !std::is_base_of&lt; Obj, Arg1 &gt;::value &gt;,
+   typename = enable_if_t&lt; !is_reference_wrapper&lt; Arg1 &gt;::value &gt;,
+   typename = enable_if_t&lt; std::is_member_function_pointer&lt; MemPtr Obj::* &gt;::value &gt;
+&gt;
+auto invoke( MemPtr Obj::* invocable, Arg1 arg1, Args... args )
+   -&gt; decltype( (*arg1.*invocable)( args... ) ) {
+   return (*arg1.*invocable)( args... );
+}
+
+template&lt;
+   typename MemPtr,
+   typename Obj,
+   typename Arg1,
+   typename = enable_if_t&lt; !std::is_base_of&lt; Obj, Arg1 &gt;::value &gt;,
+   typename = enable_if_t&lt; !is_reference_wrapper&lt; Arg1 &gt;::value &gt;
+&gt;
+auto invoke( MemPtr Obj::* invocable, Arg1 arg1 )
+   -&gt; decltype( *arg1.*invocable ) {
+   return *arg1.*invocable;
+}
+</code></pre>
+
+<p>where the first condition of <code>!std::is_base_of&lt; Obj, Arg1 &gt;::value</code> ensures this
+is not the direct object case, and the second condition is the opposite of the
+one used in the <code>std::reference_wrapper</code> case (thus insuring it is not selected
+in that case).</p>
+
+<p>This is the last of the syntaxes to cover, and so this is a working
+implementation of <code>invoke</code> which covers all cases mandated by the standard.
+That said, some things can be made better.  If you are interested, read on.</p>
+
+<h3 id="perfect-forwarding">Perfect forwarding</h3>
+
+<p>In order to be more efficient and prevent argument copies, perfect forwarding
+should be introduced into the mix.  To get perfect forwarding, one must use
+<del>universal</del><sup>[6]</sup> forwarding references, and use <code>std::forward</code> on the
+arguments inside the implementation.  In what follows, the function call syntax
+and the member function pointer syntax are explored, both with a direct object
+case.  All other cases (i.e. member object call syntax and other invoke-on
+object types) can be modified to use perfect forwarding the same way, so in the
+name of brevity, they are not explicitly covered here.</p>
+
+<p>Adding forwarding reference to the function argument list (i.e. <code>&amp;&amp;</code>) and using
+<code>std::forward</code> in the implementation, the <code>invoke</code> template for the two
+situations covered can introduce perfect forwarding by being modified like this:</p>
+
+<pre><code class="language-c++">template&lt; typename Invocable, typename... Args &gt;
+auto invoke( Invocable&amp;&amp; invocable, Args&amp;&amp;... args )
+   -&gt; decltype(
+         std::forward&lt;Invocable&gt;(invocable)( std::forward&lt;Args&gt;(args)... )
+   )
+{
+   return std::forward&lt;Invocable&gt;(invocable)( std::forward&lt;Args&gt;(args)... );
+}
+
+template&lt;
+   typename MemPtr,
+   typename Obj,
+   typename Arg1,
+   typename... Args,
+   typename = enable_if_t&lt; std::is_base_of&lt; Obj, decay_t&lt; Arg1 &gt; &gt;::value &gt;,
+   typename = enable_if_t&lt; std::is_member_function_pointer&lt; MemPtr Obj::* &gt;::value &gt;
+&gt;
+auto invoke( MemPtr Obj::*&amp;&amp; invocable, Arg1&amp;&amp; arg1, Args&amp;&amp;... args )
+   -&gt; decltype(
+         (std::forward&lt; Arg1 &gt;(arg1).*std::forward&lt; MemPtr Obj::* &gt;(invocable))
+                                             ( std::forward&lt; Args &gt;(args)... )
+   )
+{
+   return (std::forward&lt; Arg1 &gt;(arg1).*std::forward&lt; MemPtr Obj::* &gt;(invocable))
+                                             ( std::forward&lt; Args &gt;(args)... );
+}
+</code></pre>
+
+<p>Honestly, the main difficulty becomes formatting and indentation: I find nothing
+is satisfactory.  I should probably just let
+<a href="https://clang.llvm.org/docs/ClangFormat.html" target="_blank">ClangFormat</a> do it for me.  In
+any case, there are two things worth noticing.  The first is the position of
+the <code>...</code> when forwarding the parameter pack.  If you are familiar with calling
+functions parameter packs, it is not surprising, but if you&rsquo;ve never dealt with
+this kind of things, it can trip you at first.  The second is the use of
+<code>decay_t</code><sup>[4]</sup> in the <code>std::is_base_of</code> SFINAE condition in the second
+overload.  This is now necessary because the type <code>Arg1</code> can now be deduced to
+be a reference and the predicate will be <code>false</code> in that case if you do not
+remove the reference modifier to the type.  Essentially:</p>
+
+<pre><code class="language-c++">std::is_base_of&lt; Arg1, Arg1&amp;            &gt;::value == false
+std::is_base_of&lt; Arg1, decay_t&lt; Arg1&amp; &gt; &gt;::value == true
+</code></pre>
+
+<p>Other than those two little difficulties, there is nothing very surprising about
+the modifications to the original function if you are already familiar with
+perfect forwarding.  If you are not, go read up on it (I have a
+<a href="https://ghlecl.github.io/posts/learning_rvalues/" target="_blank">past blog post</a> about rvalues and perfect
+forwarding).</p>
+
+<h3 id="noexcept-specification">noexcept specification</h3>
+
+<p>One final thing that I looked into is getting the <code>noexcept</code> specifier correct
+using the <code>noexcept</code> operator.  Here is what it looks like for the same cases
+perfect forwarding was explored with:</p>
+
+<pre><code class="language-c++">template&lt; typename Invocable, typename... Args &gt;
+auto invoke( Invocable&amp;&amp; invocable, Args&amp;&amp;... args )
+   noexcept(
+      noexcept(
+         std::forward&lt;Invocable&gt;(invocable)( std::forward&lt;Args&gt;(args)... )
+      )
+   )
+   -&gt; decltype(
+         std::forward&lt;Invocable&gt;(invocable)( std::forward&lt;Args&gt;(args)... )
+   )
+{
+   return std::forward&lt;Invocable&gt;(invocable)( std::forward&lt;Args&gt;(args)... );
+}
+
+template&lt;
+   typename MemPtr,
+   typename Obj,
+   typename Arg1,
+   typename... Args,
+   typename = enable_if_t&lt; std::is_base_of&lt; Obj, decay_t&lt;Arg1&gt; &gt;::value &gt;,
+   typename = enable_if_t&lt; std::is_member_function_pointer&lt; MemPtr Obj::* &gt;::value &gt;
+&gt;
+auto invoke( MemPtr Obj::*&amp;&amp; invocable, Arg1&amp;&amp; arg1, Args&amp;&amp;... args )
+   noexcept(
+      noexcept(
+         (std::forward&lt; Arg1 &gt;(arg1).*std::forward&lt; MemPtr Obj::* &gt;(invocable))
+                                             ( std::forward&lt; Args &gt;(args)... )
+      )
+   )
+   -&gt; decltype(
+         (std::forward&lt; Arg1 &gt;(arg1).*std::forward&lt; MemPtr Obj::* &gt;(invocable))
+                                             ( std::forward&lt; Args &gt;(args)... )
+   )
+{
+   return (std::forward&lt; Arg1 &gt;(arg1).*std::forward&lt; MemPtr Obj::* &gt;(invocable))
+                                             ( std::forward&lt; Args &gt;(args)... );
+}
+</code></pre>
+
+<p>and now the indentation is really screwed up.  Another annoying thing that the
+reader might notice is that you basically have to write the implementation of
+the function thrice (see <a href="https://twitter.com/supahvee1234" target="_blank">Vittorio Romeo</a>&rsquo;s
+<a href="https://www.youtube.com/watch?v=I3T4lePH-yA" target="_blank">lightning talk about that</a>).
+Not all that DRY, but hey!</p>
+
+<h2 id="beyond-std-invoke">Beyond <code>std::invoke</code></h2>
+
+<p>I am sure there are other things that could be improved in this implementation
+of <code>invoke</code>.  For instance, from Vittorio&rsquo;s talk, I realized that my
+implementation is not <code>constexpr</code> friendly.  That said, while it might not be a
+conforming implementation, it is a working one, and it is a more general version
+of the <code>apply_on</code> template in my motivating use case (which, as I said, was
+<em>vaguely</em> related).  Writing this implementation made me learn a lot.</p>
+
+<p>Generic function calling in C++ is a large subject where inspiration could come
+from other languages as well.  For instance, at C++Now 2018,
+<a href="https://twitter.com/CppSage" target="_blank">Matt Calabrese</a> presented a library
+(<a href="https://www.youtube.com/watch?v=pKVCB_Bzalk" target="_blank">Argot</a>) he is working on
+which seeks to provide better language ergonomics for invoking <em>things</em>, any
+<em>callable</em>.  Already, in 2016, he was making a <a href="http://open-std.org/JTC1/SC22/WG21/docs/papers/2016/p0376r0.html" target="_blank">proposal</a>
+to the standards committee about unifying <code>std::invoke</code>, <code>std::apply</code>, and
+<code>std::visit</code>, and then 2017, again at C++ Now, he was giving a talk about the
+beginnings of a similar library (if not the same library) called <a href="https://www.youtube.com/watch?v=Fjw7NjndQ50&amp;list=PLTXJhw4sOAviW1OdRgPlxU5m5GU2UzJiJ" target="_blank">Call</a></p>
+
+<p>In this work, he not only explores how to provide a more uniform way to invoke
+things, but he also explores, amongst other things, argument unpacking from
+tuples much like in Python.</p>
+
+<pre><code class="language-Python"># Function taking 4 arguments and printing them
+def fn(a, b, c, d):
+   print( a, b, c, d )
+ 
+
+my_list = [ 1, 2, 3, 4 ] 
+# Unpacking list into four arguments
+fn( *my_list )
+</code></pre>
+
+<p>From his 2018 C++ Now talk, I gather he is not ready to submit such an addition
+to the language and/or the standard library at this point, but I find his ideas
+interesting and will try to stay informed (although I am far from that level of
+C++).</p>
+
+<p>Anyhow, I hope this post was of some interest.  As Jon Kalb would say:
+safe coding!</p>
+
+<hr />
+
+<h2 id="acknowledgments">Acknowledgments</h2>
+
+<p>I would like to thank <a href="https://twitter.com/sephdebusser" target="_blank">Seph De Busser</a>
+for taking the time to read this post before I published it and reassuring me
+that the mistakes in there were not too bad.  🙂</p>
+
+<h2 id="notes">Notes</h2>
+
+<p><sup>[1]</sup> I think <code>INVOKE</code> is not strictly the same as <code>std::invoke</code>, although
+I find this confusing.  As far as I can tell, <code>INVOKE</code> was in the standard before
+<code>std::invoke</code> and represents the idea of calling something.  <code>std::invoke</code> is
+just the library implementation of this idea.  I could not find an appropriate
+name for such an entity.</p>
+
+<p><sup>[2]</sup> For SFINAE, it would be easy to add a third defaulted template
+parameter after the parameter pack in the original definition of the previous
+section.  Something like:</p>
+
+<pre><code class="language-c++">template&lt;
+   typename Invocable,
+   typename... Args,
+   typename = enable_if_t&lt; !std::is_member_pointer&lt; decay_t&lt; Invocable &gt; &gt;::value &gt;
+&gt;
+auto invoke( Invocable invocable, Args... args )
+   -&gt; decltype( invocable( args... ) ) {
+   return invocable( args... );
+}
+</code></pre>
+
+<p>I would have put it in this overload instead of putting the opposite
+verification in every other overload.  If you are wondering why the <code>decay_t</code> is
+used, see the main text.</p>
+
+<p><sup>[3]</sup> In the following function template declaration:</p>
+
+<pre><code class="language-c++">template&lt; typename MemPtr, typename Obj, typename Arg1, typename... Args &gt;
+auto invoke( MemPtr Obj::* invocable, Arg1 arg1, Args... args );
+</code></pre>
+
+<p>the type the pointer points into (<code>Obj</code>) and the type of the object
+the pointer will be invoked on (<code>Arg1</code>) are not necessarily the same, since a
+derived object could be used with <code>invoke</code>.  Thus, they must be different
+template parameters to allow the compiler to deduce different types.</p>
+
+<p><sup>[4]</sup> One might have noticed that I said I was limiting myself to
+C++11, but I use the C++14 <code>enable_if_t</code> and <code>decay_t</code> helpers of
+<code>std::enable_if</code> and <code>std::decay</code>.  Those helpers are so useful that I usually
+define and use them even in C++11.  The <code>_v</code> helpers cannot be defined in
+C++11, but the <code>_t</code> helpers work perfectly.  The two of interest in this code
+can be defined like this:</p>
+
+<pre><code class="language-c++">template&lt; bool B, typename T = void &gt;
+using enable_if_t = typename std::enable_if&lt; B, T &gt;::type;
+
+template&lt; typename T &gt;
+using decay_t = typename std::decay_t&lt; T &gt;::type;
+</code></pre>
+
+<p><sup>[5]</sup> Provided you use the right semantics, e.g. you <code>std::move</code> the
+<code>std::unique_ptr</code>.</p>
+
+<p><sup>[6]</sup> I still prefer the previous term&hellip; sigh.</p>
+
+      </p>
+    </article>
+
+
+  </main>
+
+<footer>
+  <div class="footer_text">
+      <div>
+        <h3>Hi, <a href="https://ghlecl.github.io/about">I'm Ghyslain</a></h3>
+        <p>
+          I am a medical physicist by day and a hobby programmer by night.
+
+
+You can follow me on <a href="http://twitter.com/ghlecl" target="_blank">Twitter</a> and on <a href="http://github.com/ghlecl" target="_blank">GitHub</a>.  You can reach me via codeattempts [at] gmail [dot] com.
+
+        </p>
+      </div>
+      
+  </div>
+
+  
+    <div class="footer_copyright">
+      &copy; 2018 <a href="https://ghlecl.github.io/about">Ghyslain Leclerc</a>
+       - Made in Québec, Canada
+    </div>
+  
+</footer>
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/2.2.0/jquery.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/1.2.14/js/lightgallery-all.min.js" charset="utf-8"></script>
+    <script src="https://ghlecl.github.io/js/weblog.js" charset="utf-8"></script>
+    
+<script src="https://ghlecl.github.io/js/prism.js"></script>
+
+    <script type="text/javascript">
+
+  
+  $(function() {
+    
+    $.getJSON("https://api.flickr.com/services/feeds/photos_public.gne?id=&format=json&jsoncallback=?", function(data) {
+      iweblog.application.displayImages(data, 8);
+    });
+  });
+
+</script>
+
+    
+  </body>
+</html>
+

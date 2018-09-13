@@ -1,0 +1,27 @@
+Allo!
+
+Désolé des délais (très occupé).
+
+La variable lng_1 est vilaine à cause du '1', et du 'l' minuscule du littéral. C'est des symboles qui se lisent _tellement_ mal...
+
+À la fin, "Back to the first example", l'exemple repris utilise des noms de variables différents :) Mais tu as encore quelque chose de dure à lire avec "l1" et "30l", donc je suggère de travailler là-dessus. Un truc que tu peux faire est remplacer le suffixe 'l' par 'L' (même effet, mais plus facile à distinguer avec '1')
+
+Je te suggère de remplacer ceci :
+
+is_same_v< int, decltype( a + b ) > == true
+
+... par cela :
+
+static_assert(is_same_v< int, decltype( a + b ) >);
+
+... ce qui, je pense, est plus clair :)
+
+La phrase "This is to represent (or not limit) hardware, which does not share a single architecture" me semble difficile à lire, surtout à cause de la parenthèse.
+
+Pour ta note [1], il y a effectivement des subtilités, mais la note suffit (à mon avis) à établir que ce n'est pas un enjeu dans ton cas
+
+Sujets d'actualité : JF Bastien a mis une proposition (controversée) sur la table à Jacksonville pour mandater la représentation par complément à deux pour les entiers, et peut-être (éventuellement) enlever l'Undefined Behavior des débordements sur ce type. Ça semble bien cheminer, alors il se peut que cela affecte ton texte.
+
+Aussi, sur la base de cette réflexion et de l'opérateur <=> qui point à l'horizon, le comité (en particulier EWG) souhaite s'occuper de trucs très laids comme -1 < 0u qui confondent les gens. Il se peut aussi que cela impacte ton texte. À suivre... :)
+
+Bizous!

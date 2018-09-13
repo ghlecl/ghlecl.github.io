@@ -6,10 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="Ghyslain Leclerc">
     <meta name="description" content="Personnal notes on code.">
-    <meta name="generator" content="Hugo 0.47.1" />
+    <meta name="generator" content="Hugo 0.48" />
 
     
-    <title>Tags &middot; @ghlecl’s Code Attempts</title>
+    <title>@ghlecl’s Code Attempts</title>
 
     <link rel="stylesheet" href="https://ghlecl.github.io/css/weblog.css" media="screen" charset="utf-8" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/1.2.14/css/lightgallery.min.css" type="text/css" />
@@ -51,8 +51,181 @@
 </header>
 
 
-<main class="content list">
-   
+  <main class="content list">
+    
+
+  
+
+  
+
+  
+
+  
+    <article class="post">
+  
+    <h2><a rel="full-article" href="https://ghlecl.github.io/posts/cpp_invoke/">Invoking a callable in C&#43;&#43;</a></h2>
+  
+
+  <div class="postmeta">Posted on <time datetime="2018-09-13 00:00:00 &#43;0000 UTC" pubdate="">September 13, 2018</time>
+    
+  </div>
+
+  <p>
+    
+      Invoking a callable in C++ This is my exploration of the std::invoke utility of C++17. I started with something vaguely related (which I am discussing here) and ended up reading the standard library implementation of std::invoke (and that of Google&rsquo;s Abseil library). The funny thing is that in the end, I decided I did not really need any of it for my original motivation, but I did gain some knowledge along the way, so worth the time!
+    
+  </p>
+
+  
+    
+      <a class="continue" rel="full-article" href="https://ghlecl.github.io/posts/cpp_invoke/">Continue Reading »</a>
+    
+  
+</article>
+
+  
+
+
+  
+
+  
+
+  
+
+  
+    <article class="post">
+  
+    <h2><a rel="full-article" href="https://ghlecl.github.io/posts/range_function/">Python&#39;s range in C&#43;&#43;</a></h2>
+  
+
+  <div class="postmeta">Posted on <time datetime="2018-08-05 00:00:00 &#43;0000 UTC" pubdate="">August 5, 2018</time>
+    
+  </div>
+
+  <p>
+    
+      Exploring loops: Python&rsquo;s range in C++ In spite of what Sean Parent would like (i.e. no raw loops ;-) ), loops are a common control flow in programming. So common that most languages have more than one loop syntax: for loop, while loop, do while loop&hellip; Given their prevalence, loops might seem uninteresting, but when I decided to look into creating a range function[1] for C++ which would behave like Python&rsquo;s range object, I learned a thing or two and decided to write them down.
+    
+  </p>
+
+  
+    
+      <a class="continue" rel="full-article" href="https://ghlecl.github.io/posts/range_function/">Continue Reading »</a>
+    
+  
+</article>
+
+  
+
+
+  
+
+  
+
+  
+
+  
+    <article class="post">
+  
+    <h2><a rel="full-article" href="https://ghlecl.github.io/posts/usual_conversions/">Mixed types arithmetic in C&#43;&#43;</a></h2>
+  
+
+  <div class="postmeta">Posted on <time datetime="2018-05-19 00:00:00 &#43;0000 UTC" pubdate="">May 19, 2018</time>
+    
+  </div>
+
+  <p>
+    
+      Arithmetic on mixed fundamental types in C++ For a weekend project of mine, I have had to think about mixed type arithmetic on fundamental types in C++. In the process, I made sense of a few fundamental things (no pun intended ;-)&nbsp;) and I have decided to write them down. Hopefully, writing about it will allow me to both clarify my thoughts and remember the information!
+Arithmetic conversions Applying binary operators to different types might seem trivial in C++, because it mostly just works.
+    
+  </p>
+
+  
+    
+      <a class="continue" rel="full-article" href="https://ghlecl.github.io/posts/usual_conversions/">Continue Reading »</a>
+    
+  
+</article>
+
+  
+
+
+  
+
+  
+
+  
+
+  
+    <article class="post">
+  
+    <h2><a rel="full-article" href="https://ghlecl.github.io/posts/integer_representations/">Integer binary representations</a></h2>
+  
+
+  <div class="postmeta">Posted on <time datetime="2018-04-30 00:00:00 &#43;0000 UTC" pubdate="">April 30, 2018</time>
+    
+  </div>
+
+  <p>
+    
+      Integer binary representations I had never had to look closely at integer binary representations in computers. The mental model I had for them was not wrong, but it turns out it was sub-optimal and there are better ways to do things. If you use high level abstractions and do not mainly work with fundamental types, or if you do not convert between integer types, you do not have to be mindful of the binary representation of integers all the time as you program.
+    
+  </p>
+
+  
+    
+      <a class="continue" rel="full-article" href="https://ghlecl.github.io/posts/integer_representations/">Continue Reading »</a>
+    
+  
+</article>
+
+  
+
+
+  
+
+  
+    <article class="micropost">
+  
+
+<h1 id="friends-only-class">Friends only class</h1>
+
+<p>Having read <a href="https://arne-mertz.de/2016/11/stronger-types/" target="_blank">a few</a> <a href="http://www.fluentcpp.com/2016/12/05/named-constructors/" target="_blank">blog posts</a> and watched a short <a href="https://youtube.com/watch?v=jLdSjh8oqmE" target="_blank">presentation</a> on the subject of <a href="http://foonathan.net/blog/2016/10/19/strong-typedefs.html" target="_blank">strong typedefs</a>, I decided to look into their use and implementation.  In at least two implementations I have looked at (namely <a href="https://github.com/foonathan/type_safe" target="_blank">type_safe</a> and <a href="https://sourceforge.net/projects/opaque-typedef/" target="_blank">opaque</a>), I have found that mixin classes are used to add functionality to the new type.  For instance:</p>
+
+<pre><code class="language-C++">class my_strong_typedef : public addable, public divisible
+{};
+</code></pre>
+
+<p>Those mixin were implemented as empty classes that only have friend functions in them.  I was wondering what was the use of such constructs.  Turns out, it is an application of the <a href="https://en.wikipedia.org/wiki/Barton%E2%80%93Nackman_trick" target="_blank">Barton–Nackman trick</a> to allow <a href="https://en.wikipedia.org/wiki/Argument-dependent_name_lookup" target="_blank">argument dependent name lookup</a> (ADL) to find the function.</p>
+
+<p>When the compiler sees the following expression:</p>
+
+<pre><code class="language-C++">lt + rt
+</code></pre>
+
+<p>it must lookup the <code>operator+</code> function to use with the types of <code>lt</code> and <code>rt</code>.  From my understanding, it is equivalent to an unqualified call to the operator, as in:</p>
+
+<pre><code class="language-C++">operator+( lt, rt )
+</code></pre>
+
+<p>The various <a href="http://en.cppreference.com/w/cpp/language/lookup" target="_blank">name lookup</a> rules of C++, which are not so simple, are then used to find which function to call and an important aspect in this case is that during ADL:</p>
+
+<blockquote>
+<p>namespace-scoped friend functions (and function templates) that are declared in an associated class are visible through ADL even if they are not visible through ordinary lookup</p>
+</blockquote>
+
+<p>which is a quote from the cppreference website.  Because of that part of the standard, an operator defined as a friend in a class of which your class inherits is found.  With this trick, you can, as other libraries have done, create multiple mixin classes from which your primary class inherits and ADL will find the functions.  The empty classes should mostly (if not completely) be optimized away by the compiler.</p>
+
+  <a href='https://ghlecl.github.io/microposts/friends_only_class/'><aside class="dates">→ 2017/11/28 1:30 PM</aside></a>
+</article>
+
+  
+
+  
+
+  
+
 
 
 <div class="pagination">
@@ -61,11 +234,12 @@
   
 
   
+    <a href="https://ghlecl.github.io/page/2/">Older »</a>
+  
 </div>
 
 
-</main>
-
+  </main>
 
 <footer>
   <div class="footer_text">

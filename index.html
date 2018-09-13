@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="Ghyslain Leclerc">
     <meta name="description" content="Personnal notes on code.">
-    <meta name="generator" content="Hugo 0.47.1" />
+    <meta name="generator" content="Hugo 0.48" />
 
     
     <title>@ghlecl’s Code Attempts</title>
@@ -53,6 +53,38 @@
 
   <main class="content list">
     
+
+  
+
+  
+
+  
+
+  
+    <article class="post">
+  
+    <h2><a rel="full-article" href="https://ghlecl.github.io/posts/cpp_invoke/">Invoking a callable in C&#43;&#43;</a></h2>
+  
+
+  <div class="postmeta">Posted on <time datetime="2018-09-13 00:00:00 &#43;0000 UTC" pubdate="">September 13, 2018</time>
+    
+  </div>
+
+  <p>
+    
+      Invoking a callable in C++ This is my exploration of the std::invoke utility of C++17. I started with something vaguely related (which I am discussing here) and ended up reading the standard library implementation of std::invoke (and that of Google&rsquo;s Abseil library). The funny thing is that in the end, I decided I did not really need any of it for my original motivation, but I did gain some knowledge along the way, so worth the time!
+    
+  </p>
+
+  
+    
+      <a class="continue" rel="full-article" href="https://ghlecl.github.io/posts/cpp_invoke/">Continue Reading »</a>
+    
+  
+</article>
+
+  
+
 
   
 
@@ -186,33 +218,6 @@ Arithmetic conversions Applying binary operators to different types might seem t
 <p>which is a quote from the cppreference website.  Because of that part of the standard, an operator defined as a friend in a class of which your class inherits is found.  With this trick, you can, as other libraries have done, create multiple mixin classes from which your primary class inherits and ADL will find the functions.  The empty classes should mostly (if not completely) be optimized away by the compiler.</p>
 
   <a href='https://ghlecl.github.io/microposts/friends_only_class/'><aside class="dates">→ 2017/11/28 1:30 PM</aside></a>
-</article>
-
-  
-
-  
-
-  
-
-
-  
-
-  
-    <article class="micropost">
-  
-
-<h1 id="counting-chars-in-first-n-lines">Counting chars in first n lines</h1>
-
-<p>I was coding in one of my projects and wanted to make sure that the position I was finding in a file was correct.  In a first attempt, I tried copy-pasting the content of the file up to the position I was searching for into Microsoft Excel&trade; to find the length of the resulting string.  Turns out a naive copy-paste does not preserve whitespace.</p>
-
-<p>I then thought of writing a small application to do what I wanted : open a file, read the <code>n</code> first lines and find the total number of characters (bad reflex, I know).  In trying to figure out the command line interface for this, I realized first that it would be a lot of work for something that I might not use often and second, that there might be an easier way on a *Nix system.</p>
-
-<p>This lead me to simply using the applications <a href="http://man7.org/linux/man-pages/man1/head.1.html" target="_blank">head</a> and <a href="http://man7.org/linux/man-pages/man1/wc.1.html" target="_blank">wc</a> as follows:</p>
-
-<pre><code class="language-bash">head -n &lt;line_count&gt; | wc -m
-</code></pre>
-
-  <a href='https://ghlecl.github.io/microposts/count_chars_in_n_first_lines/'><aside class="dates">→ 2017/11/22 12:30 PM</aside></a>
 </article>
 
   

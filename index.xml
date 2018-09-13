@@ -7,8 +7,674 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     
-    <lastBuildDate>Sun, 05 Aug 2018 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 13 Sep 2018 00:00:00 +0000</lastBuildDate>
     <atom:link href="/" rel="self" type="application/rss+xml" />
+    
+      
+      <item>
+        <title>Invoking a callable in C&#43;&#43;</title>
+        <link>https://ghlecl.github.io/posts/cpp_invoke/</link>
+        <pubDate>Thu, 13 Sep 2018 00:00:00 +0000</pubDate>
+        <author>codeattempts@gmail.com - Ghyslain Leclerc</author>
+        <guid>https://ghlecl.github.io/posts/cpp_invoke/</guid>
+        <description>
+
+&lt;h1 id=&#34;invoking-a-callable-in-c&#34;&gt;Invoking a callable in C++&lt;/h1&gt;
+
+&lt;p&gt;This is my exploration of the &lt;a href=&#34;https://en.cppreference.com/w/cpp/utility/functional/invoke&#34; target=&#34;_blank&#34;&gt;&lt;code&gt;std::invoke&lt;/code&gt;&lt;/a&gt; utility of C++17.
+I started with something &lt;em&gt;vaguely&lt;/em&gt; related (which I am discussing here) and
+ended up reading the standard library implementation of &lt;code&gt;std::invoke&lt;/code&gt; (and that
+of Google&amp;rsquo;s &lt;a href=&#34;https://abseil.io/&#34; target=&#34;_blank&#34;&gt;Abseil&lt;/a&gt; library).  The funny thing is that in
+the end, I decided I did not really need any of it for my original motivation,
+but I did gain some knowledge along the way, so worth the time!&lt;/p&gt;
+
+&lt;h2 id=&#34;my-original-motivation&#34;&gt;My original motivation&lt;/h2&gt;
+
+&lt;p&gt;Even though &lt;a href=&#34;https://herbsutter.com/2011/10/07/why-no-container-based-algorithms&#34; target=&#34;_blank&#34;&gt;there are reasons&lt;/a&gt;
+not to have container based algorithms in the C++ standard library (upcoming
+ranges being one more reason), in my code, I find my main use case for the
+algorithms is still to work on the whole container.  Because of that, I was
+looking into ways to get whole container overloads for the algorithms.  In that
+endeavor, I stumbled upon &lt;a href=&#34;https://ideone.com/aruf06&#34; target=&#34;_blank&#34;&gt;this&lt;/a&gt; solution.  In the
+usage examples at the bottom of the code, one finds two usage syntaxes:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;apply_on( bobs, for_each, std::mem_fn( &amp;amp;Bob::stuff) );
+for_each_on( bobs, std::mem_fn( &amp;amp;Bob::stuff ) );
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;where the &lt;code&gt;for_each_on&lt;/code&gt; is obviously not in the &lt;code&gt;std&lt;/code&gt; namespace.  This is very
+close to what I am looking for, which is a function with the name &lt;code&gt;for_each&lt;/code&gt;
+that will simply forward its call to the &lt;code&gt;std::for_each&lt;/code&gt;, but will work on the
+whole container rather than asking for two iterators.  Something that would look
+like that:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;for_each( bobs, &amp;amp;Bob::stuff );
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;where this &lt;code&gt;for_each&lt;/code&gt; is not the one in namespace &lt;code&gt;std&lt;/code&gt; (but shares its name
+with it as opposed to the &lt;code&gt;for_each_on&lt;/code&gt; function in the solution I found online).&lt;/p&gt;
+
+&lt;p&gt;In adapting/inserting this solution to my code, I realized that the custom
+&lt;code&gt;apply_on&lt;/code&gt; function I found online is pretty much a particular case of C++17&amp;rsquo;s
+&lt;a href=&#34;https://en.cppreference.com/w/cpp/utility/functional/invoke&#34; target=&#34;_blank&#34;&gt;&lt;code&gt;std::invoke&lt;/code&gt;&lt;/a&gt;.
+Since I am not interested in directly using the &lt;code&gt;apply_on&lt;/code&gt; function as shown in
+the examples of the online solution, I thought I should just adapt it to use
+&lt;code&gt;std::invoke&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Unfortunately, at work, not all the external libraries that our projects depend
+on have transitioned to C++17.  Therefore, to use &lt;code&gt;std::invoke&lt;/code&gt;, I needed a
+working C++11 implementation (which would of course then not be in the &lt;code&gt;std&lt;/code&gt;
+namespace, but I digress). Turns out it is not that hard to find &lt;a href=&#34;https://github.com/tomaszkam/proposals/tree/master/invoke&#34; target=&#34;_blank&#34;&gt;a&lt;/a&gt;
+&lt;a href=&#34;https://github.com/Rapptz/Gears/blob/master/gears/functional/invoke.hpp&#34; target=&#34;_blank&#34;&gt;C++11&lt;/a&gt;
+&lt;a href=&#34;https://github.com/abseil/abseil-cpp/blob/master/absl/base/internal/invoke.h&#34; target=&#34;_blank&#34;&gt;implementation&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;That said, before using any of them, I wanted to make sure I understand the
+concepts so that I can provide support if necessary.  Thus, I set out to read
+and understand those implementations.  In the process, I came up with my own,
+which I am discussing here.  I do not pretend this implementation is superior or
+even on par with the others I have seen (and certainly not with the standard
+library implementations out there), but from the tests I have made (comparing
+with Clang&amp;rsquo;s implementation on a C++17 compiler I have access to), it seems to
+be as capable (probably did not think of every conceivable test).  It might,
+however, be very slow to compile and suboptimal.&lt;/p&gt;
+
+&lt;h2 id=&#34;syntax-es-of-a-call-in-c&#34;&gt;Syntax(es) of a &amp;ldquo;call&amp;rdquo; in C++&lt;/h2&gt;
+
+&lt;p&gt;Before I embarked on this journey, I had never needed to make function calls
+through function pointers or member pointers.  I have had the luxury/luck of
+working only on newer projects that did not involve that many callbacks.  Lambdas
+have mostly always been available to me, so I was not familiar with the various
+call syntaxes of function pointers, member pointers and the like.  Since I could
+use lambdas, when I needed to call some member function on all the elements of a
+vector, for instance, I just created a lambda doing exactly that and never
+considered using a pointer to the member.  Thus, my first hurdle was
+understanding the problem space of calling something in C++.&lt;/p&gt;
+
+&lt;p&gt;Although the section on the magical &lt;code&gt;INVOKE&lt;/code&gt; entity&lt;sup&gt;[1]&lt;/sup&gt; in the C++ 17
+standard (which is section &lt;em&gt;23.14.3&amp;nbsp;Requirements&amp;nbsp;([&lt;em&gt;func.require&lt;/em&gt;])&lt;/em&gt;)
+has seven bullet points, when looking at the bigger picture, I think it is a
+useful approximation to summarize by saying there are three call syntaxes in C++:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;function call syntax&lt;/li&gt;
+&lt;li&gt;member function pointer call syntax&lt;/li&gt;
+&lt;li&gt;member object pointer call syntax&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;where member object is roughly standardese for data member. Translated in pseudo
+code, the three syntaxes above look like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;invocable( arguments );           // function syntax
+object.*invocable( arguments );   // member function pointer syntax
+object.*invocable;                // member object pointer syntax
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The first syntax can be applied to any invocable that is not a member, be it a
+regular function, a function pointer, a lambda or a &lt;code&gt;struct&lt;/code&gt; defining a call
+operator (&lt;code&gt;operator()&lt;/code&gt;).  The two others are used when dealing with pointers to
+member.  Whether one is dealing with a pointer to member function or to member
+object, the standard allows using said pointer to call &amp;ldquo;into&amp;rdquo; an object of a
+related type either directly, through a &lt;code&gt;std::reference_wrapper&lt;/code&gt; or through a
+pointer.  In other words, there is a clause in the standard for each of the
+following calls (again in pseudo code):&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;(object.*invocable)( arguments )         // object
+(wrapper.get().*invocable)( arguments )  // std::reference_wrapper
+(*pointer.*invocable)( arguments )       // pointer to object
+
+object.*invocable           // object
+wrapper.get().*invocable    // std::reference_wrapper
+*pointer.*invocable         // pointer to object
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Note that the parentheses in the first three lines are necessary because the
+function call operator (i.e. &lt;code&gt;operator()&lt;/code&gt;) has lower
+&lt;a href=&#34;https://en.cppreference.com/w/cpp/language/operator_precedence&#34; target=&#34;_blank&#34;&gt;precedence&lt;/a&gt;
+than the pointer-to-member operator (i.e. &lt;code&gt;operator.*&lt;/code&gt;).  If the parentheses
+were not there, i.e. if the first line were written
+&lt;code&gt;object.*invocable( arguments )&lt;/code&gt; instead of the current syntax, then the order
+of operations would be &lt;code&gt;invocable( arguments )&lt;/code&gt; before &lt;code&gt;object.*invocable&lt;/code&gt;, and
+that would error out: the compiler would rightfully complain that the type of
+&lt;code&gt;invocable&lt;/code&gt; is not a callable because it would not access the member before
+trying to call it.&lt;/p&gt;
+
+&lt;p&gt;Adding the general function call syntax to the list above, one gets a total of
+seven call syntaxes, one per bullet point of the standard.  In the end, a
+conforming implementation of &lt;code&gt;std::invoke&lt;/code&gt; must provide this single function
+template which will, based on the type of its parameters and arguments, use the
+correct call syntax for the situation.  Getting there is not as easy as it seems
+(underestimating implementation difficulty is a recurring theme for me&amp;hellip;).  In
+all the C++11 implementations I have seen, it involves at least
+&lt;a href=&#34;https://en.cppreference.com/w/cpp/language/sfinae&#34; target=&#34;_blank&#34;&gt;SFINAE&lt;/a&gt; and
+&lt;a href=&#34;https://en.cppreference.com/w/cpp/language/function_template
+#Function_template_overloading&#34; target=&#34;_blank&#34;&gt;function template partial ordering&lt;/a&gt;.
+In C++17, using &lt;a href=&#34;https://en.cppreference.com/w/cpp/language/if#Constexpr_If&#34; target=&#34;_blank&#34;&gt;constexpr if&lt;/a&gt;, it is possible
+to have a simpler implementation (see
+&lt;a href=&#34;https://en.cppreference.com/w/&#34; target=&#34;_blank&#34;&gt;cppreference.com&lt;/a&gt; &lt;a href=&#34;https://en.cppreference.com/w/cpp/utility/functional/invoke
+#Possible_implementation&#34; target=&#34;_blank&#34;&gt;possible implementation&lt;/a&gt;),
+but, as mentioned, that was not a possibility for me.  Before reading on (if you
+are still interested), I would suggest reading up on SFINAE (specifically the
+&lt;a href=&#34;https://en.cppreference.com/w/cpp/types/enable_if&#34; target=&#34;_blank&#34;&gt;&lt;code&gt;std::enable_if&lt;/code&gt;&lt;/a&gt;
+technique/idiom), and maybe a little on function template partial ordering.  I
+do not explain the former at all, while I do say a little bit on the latter as I
+have discovered it while understanding the implementations of &lt;code&gt;invoke&lt;/code&gt; and this
+blog serves a bit as my note-taking!&lt;/p&gt;
+
+&lt;h2 id=&#34;c-17-s-std-invoke&#34;&gt;C++17&amp;rsquo;s &lt;code&gt;std::invoke&lt;/code&gt;&lt;/h2&gt;
+
+&lt;h3 id=&#34;the-naïve-starting-point&#34;&gt;The naïve starting point&lt;/h3&gt;
+
+&lt;p&gt;Considering only the function call syntax, the function template needed can be
+as simple as:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt; typename Invocable, typename... Args &amp;gt;
+auto invoke( Invocable invocable, Args... args )
+   -&amp;gt; decltype( invocable( args... ) ) {
+   return invocable( args... );
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Although it will work for the function call syntax, this implementation is naïve,
+not taking into account argument passing efficiency (perfect forwarding) or
+&lt;code&gt;noexcept&lt;/code&gt; specification.  It will also obviously fail for any other syntax in
+the list presented in the previous section.  We need to have other
+specializations or overloads which will handle the other call syntaxes.  Since
+it is a function template and not a class/struct template, it is not possible to
+partially specialize it.  I do not think it is possible to use full
+specialization to create the overload set needed, but I might be wrong.  That
+said, it is however possible to overload it and select the appropriate overload
+via SFINAE or function template partial ordering, which is what I have seen in
+most implementation, and what is explored next.&lt;/p&gt;
+
+&lt;h3 id=&#34;member-pointers&#34;&gt;Member pointers&lt;/h3&gt;
+
+&lt;p&gt;As written above, the &lt;code&gt;invoke&lt;/code&gt; function will not work for member pointers.
+Different approaches can be taken to deal with this problem and allow the
+function to be called with other member pointers.  One way is to write an
+overload of the function which will not take just any invocable as an argument,
+but only member pointers.  This overload will still need to be a template to
+accommodate member pointers of any type and some mechanism is needed to insure
+that the template is selected only when called with a member pointer.  One way
+to achieve this is through &lt;a href=&#34;https://en.cppreference.com/w/cpp/language/function_template#Function_template
+_overloading&#34; target=&#34;_blank&#34;&gt;function template partial ordering&lt;/a&gt;, which is what most implementations that I have seen have used.
+Since I have been influenced by those implementations, I did the same.  There
+could have been alternatives, for instance SFINAE.&lt;sup&gt;[2]&lt;/sup&gt;  That said, I
+went with partial ordering.  This concept relies on template parameters and
+function arguments being such that one function is considered more specialized
+than the other.  The algorithm for partial ordering is well explained in
+&lt;a href=&#34;https://stackoverflow.com/a/17008568&#34; target=&#34;_blank&#34;&gt;this StackOverflow answer&lt;/a&gt;.  As stated in
+the answer, a comment of the original question gives a pretty good description
+of the concept:&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;Partial ordering basically checks in the parameters of two templates, if the
+parameter of one is more restrictive than the corresponding parameter of the
+other. If you have &lt;code&gt;f(T)&lt;/code&gt; and &lt;code&gt;f(bar&amp;lt;T&amp;gt;)&lt;/code&gt; (with &lt;code&gt;T&lt;/code&gt; as a template parameter),
+then the first overload can take all possible arguments of the second
+overload, but the second overload can&amp;rsquo;t take all possible arguments from the
+first overload - only those of the &lt;code&gt;bar&amp;lt;T&amp;gt;&lt;/code&gt; form.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Putting aside perfect forwarding and the &lt;code&gt;noexcept&lt;/code&gt; specification for now
+(we&amp;rsquo;ll come back to them in the end), an overload of the function template which
+uses function template partial ordering can be written like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt; typename MemPtr, typename Obj, typename Arg1, typename... Args &amp;gt;
+auto invoke( MemPtr Obj::* invocable, Arg1 arg1, Args... args )
+   -&amp;gt; decltype( (arg1.*invocable)( args... ) ) {
+   return (arg1.*invocable)( args... );
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The template parameters are the member pointer type (&lt;code&gt;MemPtr&lt;/code&gt;), the type pointed
+into by the member pointer (&lt;code&gt;Obj&lt;/code&gt;), the object type the pointer is called on
+(&lt;code&gt;Arg1&lt;/code&gt;&lt;sup&gt;[3]&lt;/sup&gt;) and the subsequent argument types (&lt;code&gt;Args...&lt;/code&gt;), if any.
+For plain function pointers, this deduction will fail because the first function
+argument will not be a match, and the original overload will be selected.  For
+member pointers, the substitution will succeed and this overload will be
+considered more specialized, and it will be selected as intended.  Note again
+the parentheses around the &lt;code&gt;arg1.*invocable&lt;/code&gt; both in the &lt;code&gt;decltype&lt;/code&gt; and in the
+template body.  As mentioned in the previous section, those are mandatory.&lt;/p&gt;
+
+&lt;p&gt;Although this template does work, in its current form, it will be selected
+whenever &lt;code&gt;invoke&lt;/code&gt; is called with a member pointer as its first argument,
+even if the object you want to invoke the pointer on (the second argument to
+&lt;code&gt;invoke&lt;/code&gt; which has type &lt;code&gt;Arg1&lt;/code&gt;) is unrelated to the type the pointer points
+into (type &lt;code&gt;Obj&lt;/code&gt;).  This is a problem because for arbitrary unrelated types,
+using the function pointer from one type on the other will fail to compile.
+To prevent this overload from being selected when the types are unrelated,
+SFINAE can be used.  To do this, a defaulted template parameter is added after
+the parameter pack and defaulted to &lt;code&gt;enable_if_t&lt;/code&gt;&lt;sup&gt;[4]&lt;/sup&gt; with a predicate
+to filter out the cases that should not match. In this case, the predicate is
+&lt;code&gt;std::is_base_of&amp;lt; Obj, Arg1 &amp;gt;&lt;/code&gt; and the solution looks like this:
+this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt;
+   typename MemPtr,
+   typename Obj,
+   typename Arg1,
+   typename... Args,
+   typename = enable_if_t&amp;lt; std::is_base_of&amp;lt; Obj, Arg1 &amp;gt;::value &amp;gt;
+&amp;gt;
+auto invoke( MemPtr Obj::* invocable, Arg1 arg1, Args... args )
+   -&amp;gt; decltype( (arg1.*invocable)( args... ) ) {
+   return (arg1.*invocable)( args... );
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;where we can bikeshed my formatting some other time! 🙂  With this in place,
+this overload will not be selected when there is no inheritance (or identity)
+relationship between the member pointer object type (&lt;code&gt;Obj&lt;/code&gt;) and the invoked-on
+object type (&lt;code&gt;Arg1&lt;/code&gt;).&lt;/p&gt;
+
+&lt;p&gt;Alright, this overload is a step in the right direction, but it still cannot be
+used with member &lt;em&gt;object&lt;/em&gt; pointers.  That is because the call syntax is wrong:
+there must not be an argument list after the invocable.  If we want to have
+member object pointers working, there has to be a third overload with the
+appropriate call syntax.  If there is a third overload, there needs to be a way
+to select it when needed, and one cannot rely only on the function template
+partial ordering, since this will distinguish between callables and member
+pointers, but not between different member pointers, since they have the same
+syntax in the function argument list.  For this, we must rely once more on
+SFINAE and the standard library type traits, adding one more defaulted
+template parameter after the parameter pack for one of the overloads:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt;
+   typename MemPtr,
+   typename Obj,
+   typename Arg1,
+   typename... Args,
+   typename = enable_if_t&amp;lt; std::is_base_of&amp;lt; Obj, Arg1 &amp;gt;::value &amp;gt;,
+   typename = enable_if_t&amp;lt; std::is_member_function_pointer&amp;lt; MemPtr Obj::* &amp;gt;::value &amp;gt;
+&amp;gt;
+auto invoke( MemPtr Obj::* invocable, Arg1 arg1, Args... args )
+   -&amp;gt; decltype( (arg1.*invocable)( args... ) ) {
+   return (arg1.*invocable)( args... );
+}
+
+template&amp;lt;
+   typename MemPtr,
+   typename Obj,
+   typename Arg1,
+   typename = enable_if_t&amp;lt; std::is_base_of&amp;lt; Obj, Arg1 &amp;gt;::value &amp;gt;
+&amp;gt;
+auto invoke( MemPtr Obj::* invocable, Arg1 arg1 )
+   -&amp;gt; decltype( arg1.*invocable ) {
+   return arg1.*invocable;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;It should be noted that using the predicate &lt;code&gt;std::is_member_object_pointer&lt;/code&gt; on
+the last overload instead would have also worked.  Now, the overload set of
+the three &lt;code&gt;invoke&lt;/code&gt; functions defined above will be callable on anything that has
+the free function syntax, the member function pointer syntax or the member
+object (a.k.a. data member) pointer syntax, if the latter two are used directly
+with an object of the appropriate type (i.e. a type the member pointer points
+into or a type derived from it).  This constitutes only three of the seven
+syntaxes mandated by the standard.  None of the overloads will work if the
+object to call the member pointer on (&lt;code&gt;arg1&lt;/code&gt;) is a &lt;code&gt;std::reference_wrapper&lt;/code&gt; of
+such an object or a pointer to such an object.  Still some distance to go.&lt;/p&gt;
+
+&lt;h3 id=&#34;invoked-on-object-type&#34;&gt;Invoked-on object type&lt;/h3&gt;
+
+&lt;p&gt;If you have felt like this is getting verbose already, you are not going to like
+the rest of this blog post.  Basically, for each of the two last overloads,
+three variants are needed (the one already defined and two more):&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;one that can be called with an object of the type the member pointer points
+ into (or a type derived from it),&lt;/li&gt;
+&lt;li&gt;one that can be called with a &lt;code&gt;std::reference_wrapper&lt;/code&gt; to an object of the
+ type the member pointer points into (or a type derived from it),&lt;/li&gt;
+&lt;li&gt;or one that can be called on a pointer to an object of the type the member
+ pointer points into (or a type derived from it).&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Expressed in a more concrete way, considering the &lt;code&gt;invoke&lt;/code&gt; overloads as defined
+above and using the argument types in their declarations, the previous text
+means that if &lt;code&gt;Arg1&lt;/code&gt; is of the type &lt;code&gt;Obj&lt;/code&gt; or a type derived from it, &lt;code&gt;invoke&lt;/code&gt;
+should be able to call the member pointer with&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;an object of type &lt;code&gt;Arg1&lt;/code&gt;,&lt;/li&gt;
+&lt;li&gt;an object of type &lt;code&gt;std::reference_wrapper&amp;lt; Arg1 &amp;gt;&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;or an object or type &lt;code&gt;*Arg1&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;As mentioned, the first case (i.e. object) is already written.  Let us tackle
+the last two.&lt;/p&gt;
+
+&lt;h4 id=&#34;std-reference-wrapper&#34;&gt;&lt;code&gt;std::reference_wrapper&lt;/code&gt;&lt;/h4&gt;
+
+&lt;p&gt;To handle the second case (i.e. &lt;code&gt;std::reference_wrapper&lt;/code&gt;, one has to write a
+template working on member pointers which will be selected only when the second
+argument is a &lt;code&gt;std::reference_wrapper&lt;/code&gt; to an object of an appropriate type, and
+SFINAE away otherwise.  Again, function template partial ordering is used to
+distinguish between function call syntax and member pointer syntax.  The new
+challenge is to find a way for the overload to be selected only when the
+second argument&amp;rsquo;s type is a &lt;code&gt;std::reference_wrapper&lt;/code&gt;.  This kind of requirement
+has been solved with &lt;code&gt;enable_if_t&lt;/code&gt; in the previous sections and the same
+technique can be applied here: add a defaulted template parameter after the
+parameter pack and default it to &lt;code&gt;enable_if_t&lt;/code&gt; with an appropriate predicate.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt;
+   typename MemPtr,
+   typename Obj,
+   typename Arg1,
+   typename... Args,
+   typename = enable_if_t&amp;lt; is_reference_wrapper&amp;lt; Arg1 &amp;gt;::value &amp;gt;,
+   typename = enable_if_t&amp;lt; std::is_member_function_pointer&amp;lt; MemPtr Obj::* &amp;gt;::value &amp;gt;
+&amp;gt;
+auto invoke( MemPtr Obj::* invocable, Arg1 arg1, Args... args )
+   -&amp;gt; decltype( (arg1.get().*invocable)( args... ) ) {
+   return (arg1.get().*invocable)( args... );
+}
+
+template&amp;lt;
+   typename MemPtr,
+   typename Obj,
+   typename Arg1,
+   typename = enable_if_t&amp;lt; is_reference_wrapper&amp;lt; Arg1 &amp;gt;::value &amp;gt;
+&amp;gt;
+auto invoke( MemPtr Obj::* invocable, Arg1 arg1 )
+   -&amp;gt; decltype( arg1.get().*invocable ) {
+   return arg1.get().*invocable;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Unfortunately, there is no type trait in the standard library to determine if a
+type is a &lt;code&gt;std::reference_wrapper&lt;/code&gt;.  Such a type trait can be written like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template &amp;lt;class T&amp;gt;
+struct is_reference_wrapper : std::false_type {};
+
+template &amp;lt;class U&amp;gt;
+struct is_reference_wrapper&amp;lt; std::reference_wrapper&amp;lt; U &amp;gt; &amp;gt; : std::true_type {};
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;which would probably be put in a &lt;code&gt;detail&lt;/code&gt; namespace as this does not need to be
+used by user code.  With this type trait and the definition above, the calls
+where the invoked-on object type is &lt;code&gt;std::reference_wrapper&lt;/code&gt; work.&lt;/p&gt;
+
+&lt;h4 id=&#34;pointer-to-object&#34;&gt;Pointer to object&lt;/h4&gt;
+
+&lt;p&gt;One would think the last case is handled the same way simply by replacing the
+type trait used in the &lt;code&gt;enable_if_t&lt;/code&gt; by the
+&lt;a href=&#34;https://en.cppreference.com/w/cpp/types/is_pointer&#34; target=&#34;_blank&#34;&gt;&lt;code&gt;std::is_pointer&lt;/code&gt;&lt;/a&gt;
+type trait of the standard library, but in most implementations I have seen, it
+is not the case.  I believe the reason is that testing with &lt;code&gt;std::is_pointer&lt;/code&gt;
+will yield &lt;code&gt;false&lt;/code&gt; for smart pointers even if the invoked-on pointer syntax
+should actually work for them.&lt;sup&gt;[5]&lt;/sup&gt;  One could test for every smart
+pointer in the standard library inside the predicate of the &lt;code&gt;enable_if_t&lt;/code&gt;, but
+that would needlessly prevent user defined smart pointers to be used, and the
+standard library implementer (or the one implementing &lt;code&gt;invoke&lt;/code&gt;) cannot reliably
+test for every user defined smart pointer.  Thus, the implementations usually
+check that they are neither in the first nor in the second cases (i.e. neither
+directly on an appropriately typed object nor on a &lt;code&gt;std::reference_wrapper&lt;/code&gt; to
+one such object), and direct any other invoked-on object type to the last case.
+This can be done once more using defaulted template parameters after the
+parameter pack in combination with SFINAE, much like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt;
+   typename MemPtr,
+   typename Obj,
+   typename Arg1,
+   typename... Args,
+   typename = enable_if_t&amp;lt; !std::is_base_of&amp;lt; Obj, Arg1 &amp;gt;::value &amp;gt;,
+   typename = enable_if_t&amp;lt; !is_reference_wrapper&amp;lt; Arg1 &amp;gt;::value &amp;gt;,
+   typename = enable_if_t&amp;lt; std::is_member_function_pointer&amp;lt; MemPtr Obj::* &amp;gt;::value &amp;gt;
+&amp;gt;
+auto invoke( MemPtr Obj::* invocable, Arg1 arg1, Args... args )
+   -&amp;gt; decltype( (*arg1.*invocable)( args... ) ) {
+   return (*arg1.*invocable)( args... );
+}
+
+template&amp;lt;
+   typename MemPtr,
+   typename Obj,
+   typename Arg1,
+   typename = enable_if_t&amp;lt; !std::is_base_of&amp;lt; Obj, Arg1 &amp;gt;::value &amp;gt;,
+   typename = enable_if_t&amp;lt; !is_reference_wrapper&amp;lt; Arg1 &amp;gt;::value &amp;gt;
+&amp;gt;
+auto invoke( MemPtr Obj::* invocable, Arg1 arg1 )
+   -&amp;gt; decltype( *arg1.*invocable ) {
+   return *arg1.*invocable;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;where the first condition of &lt;code&gt;!std::is_base_of&amp;lt; Obj, Arg1 &amp;gt;::value&lt;/code&gt; ensures this
+is not the direct object case, and the second condition is the opposite of the
+one used in the &lt;code&gt;std::reference_wrapper&lt;/code&gt; case (thus insuring it is not selected
+in that case).&lt;/p&gt;
+
+&lt;p&gt;This is the last of the syntaxes to cover, and so this is a working
+implementation of &lt;code&gt;invoke&lt;/code&gt; which covers all cases mandated by the standard.
+That said, some things can be made better.  If you are interested, read on.&lt;/p&gt;
+
+&lt;h3 id=&#34;perfect-forwarding&#34;&gt;Perfect forwarding&lt;/h3&gt;
+
+&lt;p&gt;In order to be more efficient and prevent argument copies, perfect forwarding
+should be introduced into the mix.  To get perfect forwarding, one must use
+&lt;del&gt;universal&lt;/del&gt;&lt;sup&gt;[6]&lt;/sup&gt; forwarding references, and use &lt;code&gt;std::forward&lt;/code&gt; on the
+arguments inside the implementation.  In what follows, the function call syntax
+and the member function pointer syntax are explored, both with a direct object
+case.  All other cases (i.e. member object call syntax and other invoke-on
+object types) can be modified to use perfect forwarding the same way, so in the
+name of brevity, they are not explicitly covered here.&lt;/p&gt;
+
+&lt;p&gt;Adding forwarding reference to the function argument list (i.e. &lt;code&gt;&amp;amp;&amp;amp;&lt;/code&gt;) and using
+&lt;code&gt;std::forward&lt;/code&gt; in the implementation, the &lt;code&gt;invoke&lt;/code&gt; template for the two
+situations covered can introduce perfect forwarding by being modified like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt; typename Invocable, typename... Args &amp;gt;
+auto invoke( Invocable&amp;amp;&amp;amp; invocable, Args&amp;amp;&amp;amp;... args )
+   -&amp;gt; decltype(
+         std::forward&amp;lt;Invocable&amp;gt;(invocable)( std::forward&amp;lt;Args&amp;gt;(args)... )
+   )
+{
+   return std::forward&amp;lt;Invocable&amp;gt;(invocable)( std::forward&amp;lt;Args&amp;gt;(args)... );
+}
+
+template&amp;lt;
+   typename MemPtr,
+   typename Obj,
+   typename Arg1,
+   typename... Args,
+   typename = enable_if_t&amp;lt; std::is_base_of&amp;lt; Obj, decay_t&amp;lt; Arg1 &amp;gt; &amp;gt;::value &amp;gt;,
+   typename = enable_if_t&amp;lt; std::is_member_function_pointer&amp;lt; MemPtr Obj::* &amp;gt;::value &amp;gt;
+&amp;gt;
+auto invoke( MemPtr Obj::*&amp;amp;&amp;amp; invocable, Arg1&amp;amp;&amp;amp; arg1, Args&amp;amp;&amp;amp;... args )
+   -&amp;gt; decltype(
+         (std::forward&amp;lt; Arg1 &amp;gt;(arg1).*std::forward&amp;lt; MemPtr Obj::* &amp;gt;(invocable))
+                                             ( std::forward&amp;lt; Args &amp;gt;(args)... )
+   )
+{
+   return (std::forward&amp;lt; Arg1 &amp;gt;(arg1).*std::forward&amp;lt; MemPtr Obj::* &amp;gt;(invocable))
+                                             ( std::forward&amp;lt; Args &amp;gt;(args)... );
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Honestly, the main difficulty becomes formatting and indentation: I find nothing
+is satisfactory.  I should probably just let
+&lt;a href=&#34;https://clang.llvm.org/docs/ClangFormat.html&#34; target=&#34;_blank&#34;&gt;ClangFormat&lt;/a&gt; do it for me.  In
+any case, there are two things worth noticing.  The first is the position of
+the &lt;code&gt;...&lt;/code&gt; when forwarding the parameter pack.  If you are familiar with calling
+functions parameter packs, it is not surprising, but if you&amp;rsquo;ve never dealt with
+this kind of things, it can trip you at first.  The second is the use of
+&lt;code&gt;decay_t&lt;/code&gt;&lt;sup&gt;[4]&lt;/sup&gt; in the &lt;code&gt;std::is_base_of&lt;/code&gt; SFINAE condition in the second
+overload.  This is now necessary because the type &lt;code&gt;Arg1&lt;/code&gt; can now be deduced to
+be a reference and the predicate will be &lt;code&gt;false&lt;/code&gt; in that case if you do not
+remove the reference modifier to the type.  Essentially:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;std::is_base_of&amp;lt; Arg1, Arg1&amp;amp;            &amp;gt;::value == false
+std::is_base_of&amp;lt; Arg1, decay_t&amp;lt; Arg1&amp;amp; &amp;gt; &amp;gt;::value == true
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Other than those two little difficulties, there is nothing very surprising about
+the modifications to the original function if you are already familiar with
+perfect forwarding.  If you are not, go read up on it (I have a
+&lt;a href=&#34;https://ghlecl.github.io/posts/learning_rvalues/&#34; target=&#34;_blank&#34;&gt;past blog post&lt;/a&gt; about rvalues and perfect
+forwarding).&lt;/p&gt;
+
+&lt;h3 id=&#34;noexcept-specification&#34;&gt;noexcept specification&lt;/h3&gt;
+
+&lt;p&gt;One final thing that I looked into is getting the &lt;code&gt;noexcept&lt;/code&gt; specifier correct
+using the &lt;code&gt;noexcept&lt;/code&gt; operator.  Here is what it looks like for the same cases
+perfect forwarding was explored with:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt; typename Invocable, typename... Args &amp;gt;
+auto invoke( Invocable&amp;amp;&amp;amp; invocable, Args&amp;amp;&amp;amp;... args )
+   noexcept(
+      noexcept(
+         std::forward&amp;lt;Invocable&amp;gt;(invocable)( std::forward&amp;lt;Args&amp;gt;(args)... )
+      )
+   )
+   -&amp;gt; decltype(
+         std::forward&amp;lt;Invocable&amp;gt;(invocable)( std::forward&amp;lt;Args&amp;gt;(args)... )
+   )
+{
+   return std::forward&amp;lt;Invocable&amp;gt;(invocable)( std::forward&amp;lt;Args&amp;gt;(args)... );
+}
+
+template&amp;lt;
+   typename MemPtr,
+   typename Obj,
+   typename Arg1,
+   typename... Args,
+   typename = enable_if_t&amp;lt; std::is_base_of&amp;lt; Obj, decay_t&amp;lt;Arg1&amp;gt; &amp;gt;::value &amp;gt;,
+   typename = enable_if_t&amp;lt; std::is_member_function_pointer&amp;lt; MemPtr Obj::* &amp;gt;::value &amp;gt;
+&amp;gt;
+auto invoke( MemPtr Obj::*&amp;amp;&amp;amp; invocable, Arg1&amp;amp;&amp;amp; arg1, Args&amp;amp;&amp;amp;... args )
+   noexcept(
+      noexcept(
+         (std::forward&amp;lt; Arg1 &amp;gt;(arg1).*std::forward&amp;lt; MemPtr Obj::* &amp;gt;(invocable))
+                                             ( std::forward&amp;lt; Args &amp;gt;(args)... )
+      )
+   )
+   -&amp;gt; decltype(
+         (std::forward&amp;lt; Arg1 &amp;gt;(arg1).*std::forward&amp;lt; MemPtr Obj::* &amp;gt;(invocable))
+                                             ( std::forward&amp;lt; Args &amp;gt;(args)... )
+   )
+{
+   return (std::forward&amp;lt; Arg1 &amp;gt;(arg1).*std::forward&amp;lt; MemPtr Obj::* &amp;gt;(invocable))
+                                             ( std::forward&amp;lt; Args &amp;gt;(args)... );
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;and now the indentation is really screwed up.  Another annoying thing that the
+reader might notice is that you basically have to write the implementation of
+the function thrice (see &lt;a href=&#34;https://twitter.com/supahvee1234&#34; target=&#34;_blank&#34;&gt;Vittorio Romeo&lt;/a&gt;&amp;rsquo;s
+&lt;a href=&#34;https://www.youtube.com/watch?v=I3T4lePH-yA&#34; target=&#34;_blank&#34;&gt;lightning talk about that&lt;/a&gt;).
+Not all that DRY, but hey!&lt;/p&gt;
+
+&lt;h2 id=&#34;beyond-std-invoke&#34;&gt;Beyond &lt;code&gt;std::invoke&lt;/code&gt;&lt;/h2&gt;
+
+&lt;p&gt;I am sure there are other things that could be improved in this implementation
+of &lt;code&gt;invoke&lt;/code&gt;.  For instance, from Vittorio&amp;rsquo;s talk, I realized that my
+implementation is not &lt;code&gt;constexpr&lt;/code&gt; friendly.  That said, while it might not be a
+conforming implementation, it is a working one, and it is a more general version
+of the &lt;code&gt;apply_on&lt;/code&gt; template in my motivating use case (which, as I said, was
+&lt;em&gt;vaguely&lt;/em&gt; related).  Writing this implementation made me learn a lot.&lt;/p&gt;
+
+&lt;p&gt;Generic function calling in C++ is a large subject where inspiration could come
+from other languages as well.  For instance, at C++Now 2018,
+&lt;a href=&#34;https://twitter.com/CppSage&#34; target=&#34;_blank&#34;&gt;Matt Calabrese&lt;/a&gt; presented a library
+(&lt;a href=&#34;https://www.youtube.com/watch?v=pKVCB_Bzalk&#34; target=&#34;_blank&#34;&gt;Argot&lt;/a&gt;) he is working on
+which seeks to provide better language ergonomics for invoking &lt;em&gt;things&lt;/em&gt;, any
+&lt;em&gt;callable&lt;/em&gt;.  Already, in 2016, he was making a &lt;a href=&#34;http://open-std.org/JTC1/SC22/WG21/docs/papers/2016/p0376r0.html&#34; target=&#34;_blank&#34;&gt;proposal&lt;/a&gt;
+to the standards committee about unifying &lt;code&gt;std::invoke&lt;/code&gt;, &lt;code&gt;std::apply&lt;/code&gt;, and
+&lt;code&gt;std::visit&lt;/code&gt;, and then 2017, again at C++ Now, he was giving a talk about the
+beginnings of a similar library (if not the same library) called &lt;a href=&#34;https://www.youtube.com/watch?v=Fjw7NjndQ50&amp;amp;list=PLTXJhw4sOAviW1OdRgPlxU5m5GU2UzJiJ&#34; target=&#34;_blank&#34;&gt;Call&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;In this work, he not only explores how to provide a more uniform way to invoke
+things, but he also explores, amongst other things, argument unpacking from
+tuples much like in Python.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-Python&#34;&gt;# Function taking 4 arguments and printing them
+def fn(a, b, c, d):
+   print( a, b, c, d )
+ 
+
+my_list = [ 1, 2, 3, 4 ] 
+# Unpacking list into four arguments
+fn( *my_list )
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;From his 2018 C++ Now talk, I gather he is not ready to submit such an addition
+to the language and/or the standard library at this point, but I find his ideas
+interesting and will try to stay informed (although I am far from that level of
+C++).&lt;/p&gt;
+
+&lt;p&gt;Anyhow, I hope this post was of some interest.  As Jon Kalb would say:
+safe coding!&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;h2 id=&#34;acknowledgments&#34;&gt;Acknowledgments&lt;/h2&gt;
+
+&lt;p&gt;I would like to thank &lt;a href=&#34;https://twitter.com/sephdebusser&#34; target=&#34;_blank&#34;&gt;Seph De Busser&lt;/a&gt;
+for taking the time to read this post before I published it and reassuring me
+that the mistakes in there were not too bad.  🙂&lt;/p&gt;
+
+&lt;h2 id=&#34;notes&#34;&gt;Notes&lt;/h2&gt;
+
+&lt;p&gt;&lt;sup&gt;[1]&lt;/sup&gt; I think &lt;code&gt;INVOKE&lt;/code&gt; is not strictly the same as &lt;code&gt;std::invoke&lt;/code&gt;, although
+I find this confusing.  As far as I can tell, &lt;code&gt;INVOKE&lt;/code&gt; was in the standard before
+&lt;code&gt;std::invoke&lt;/code&gt; and represents the idea of calling something.  &lt;code&gt;std::invoke&lt;/code&gt; is
+just the library implementation of this idea.  I could not find an appropriate
+name for such an entity.&lt;/p&gt;
+
+&lt;p&gt;&lt;sup&gt;[2]&lt;/sup&gt; For SFINAE, it would be easy to add a third defaulted template
+parameter after the parameter pack in the original definition of the previous
+section.  Something like:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt;
+   typename Invocable,
+   typename... Args,
+   typename = enable_if_t&amp;lt; !std::is_member_pointer&amp;lt; decay_t&amp;lt; Invocable &amp;gt; &amp;gt;::value &amp;gt;
+&amp;gt;
+auto invoke( Invocable invocable, Args... args )
+   -&amp;gt; decltype( invocable( args... ) ) {
+   return invocable( args... );
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;I would have put it in this overload instead of putting the opposite
+verification in every other overload.  If you are wondering why the &lt;code&gt;decay_t&lt;/code&gt; is
+used, see the main text.&lt;/p&gt;
+
+&lt;p&gt;&lt;sup&gt;[3]&lt;/sup&gt; In the following function template declaration:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt; typename MemPtr, typename Obj, typename Arg1, typename... Args &amp;gt;
+auto invoke( MemPtr Obj::* invocable, Arg1 arg1, Args... args );
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;the type the pointer points into (&lt;code&gt;Obj&lt;/code&gt;) and the type of the object
+the pointer will be invoked on (&lt;code&gt;Arg1&lt;/code&gt;) are not necessarily the same, since a
+derived object could be used with &lt;code&gt;invoke&lt;/code&gt;.  Thus, they must be different
+template parameters to allow the compiler to deduce different types.&lt;/p&gt;
+
+&lt;p&gt;&lt;sup&gt;[4]&lt;/sup&gt; One might have noticed that I said I was limiting myself to
+C++11, but I use the C++14 &lt;code&gt;enable_if_t&lt;/code&gt; and &lt;code&gt;decay_t&lt;/code&gt; helpers of
+&lt;code&gt;std::enable_if&lt;/code&gt; and &lt;code&gt;std::decay&lt;/code&gt;.  Those helpers are so useful that I usually
+define and use them even in C++11.  The &lt;code&gt;_v&lt;/code&gt; helpers cannot be defined in
+C++11, but the &lt;code&gt;_t&lt;/code&gt; helpers work perfectly.  The two of interest in this code
+can be defined like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt; bool B, typename T = void &amp;gt;
+using enable_if_t = typename std::enable_if&amp;lt; B, T &amp;gt;::type;
+
+template&amp;lt; typename T &amp;gt;
+using decay_t = typename std::decay_t&amp;lt; T &amp;gt;::type;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;&lt;sup&gt;[5]&lt;/sup&gt; Provided you use the right semantics, e.g. you &lt;code&gt;std::move&lt;/code&gt; the
+&lt;code&gt;std::unique_ptr&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;sup&gt;[6]&lt;/sup&gt; I still prefer the previous term&amp;hellip; sigh.&lt;/p&gt;
+</description>
+      </item>
+      
     
       
       <item>
