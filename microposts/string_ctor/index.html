@@ -9,7 +9,7 @@
     <meta name="generator" content="Hugo 0.48" />
 
     
-    <title>Microposts &middot; @ghlecl’s Code Attempts</title>
+    <title>One of std::string ctor &middot; @ghlecl’s Code Attempts</title>
 
     <link rel="stylesheet" href="https://ghlecl.github.io/css/weblog.css" media="screen" charset="utf-8" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/1.2.14/css/lightgallery.min.css" type="text/css" />
@@ -51,53 +51,61 @@
 </header>
 
 
-
-
   <main class="content">
-  <article class="post-groups">
-    <div class="post-group">
-    
-      <div class="post-group-item">
-        <h3>2018</h3>
-        <ul>
-          
-            <li>
-              
-                <a rel="full-article" href="https://ghlecl.github.io/microposts/string_ctor/">One of std::string ctor</a>
-                on <time datetime="2018-09-18 21:45:00 &#43;0000 UTC" pubdate="">September 18</time>
-              
-            </li>
-          
-        </ul>
-      </div>
-    
-      <div class="post-group-item">
-        <h3>2017</h3>
-        <ul>
-          
-            <li>
-              
-                <a rel="full-article" href="https://ghlecl.github.io/microposts/friends_only_class/">Friends only class</a>
-                on <time datetime="2017-11-28 13:30:00 &#43;0000 UTC" pubdate="">November 28</time>
-              
-            </li>
-          
-            <li>
-              
-                <a rel="full-article" href="https://ghlecl.github.io/microposts/count_chars_in_n_first_lines/">Count chars in lines</a>
-                on <time datetime="2017-11-22 12:30:00 &#43;0000 UTC" pubdate="">November 22</time>
-              
-            </li>
-          
-        </ul>
-      </div>
-    
-    </div>
-  </article>
-</main>
+    <article class="micropost">
+  
 
+<h1 id="std-string-from-c-style-string-ctor">std::string from C style string ctor</h1>
 
+<p>In writing a function template having to create a <code>std::string</code> from a <code>char[]</code>,
+I have had to use the following constructor of <code>std::string</code>:</p>
 
+<pre><code class="language-c++">basic_string( CharT const* s, size_type count, Allocator const&amp; alloc = Allocator() );
+</code></pre>
+
+<p>which you can find documentation for in the standard or on <a href="https://en.cppreference.com/w/cpp/string/basic_string/basic_string" target="_blank">cppreference.com</a>.  In using
+this constructor, I have had a &ldquo;off by one&rdquo; problem with the <code>count</code> parameter.
+The function template I originally wrote used the constructor like this:</p>
+
+<pre><code class="language-c++">template&lt; std::size_t N &gt;
+std::string foo( char const ( &amp;char_arr )[N] ) {
+   return std::string the_strg( char_arr, N );  // WRONG, do not do this
+}
+</code></pre>
+
+<p>which is a mistake.  The terminating <code>'\0'</code> character will be included in the
+value of <code>N</code> and will thus be part of the <code>std::string</code> (which <em>can</em> contain
+nulls).  Thus, the size of the new <code>std::string</code> will be one more then expected:</p>
+
+<pre><code class="language-c++">char const arr[] = &quot;string&quot;;
+auto bar = foo( arr );
+assert( bar.length() != 6 );
+assert( bar.length() == 7 );
+</code></pre>
+
+<p>Usually, when one is certain that the C style string is null terminated, the
+recommended way to use the constructor is:</p>
+
+<pre><code class="language-c++">std::string the_strg( char_arr, std::strlen( char_arr ) );
+</code></pre>
+
+<p>Since <code>std::strlen</code> will not include the null terminator in the length returned.
+To mimic this behavior, my template had to be written as:</p>
+
+<pre><code class="language-c++">template&lt; std::size_t N &gt;
+std::string foo( char const ( &amp;char_arr )[N] ) {
+   std::string the_strg( char_arr, N - 1 );
+}
+</code></pre>
+
+<p>which will eliminate the need to calculate the length at runtime and yield the
+correct <code>std::string</code> with the expected length.  This is not exactly a hard
+problem, but it bit me and I want to remember this little detail!</p>
+
+  <a href='https://ghlecl.github.io/microposts/string_ctor/'><aside class="dates">→ 2018/09/18 9:45 PM</aside></a>
+</article>
+
+  </main>
 
 <footer>
   <div class="footer_text">
@@ -143,3 +151,4 @@ You can follow me on <a href="http://twitter.com/ghlecl" target="_blank">Twitter
     
   </body>
 </html>
+

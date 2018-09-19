@@ -7,8 +7,67 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     
-    <lastBuildDate>Thu, 13 Sep 2018 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 18 Sep 2018 21:45:00 +0000</lastBuildDate>
     <atom:link href="/" rel="self" type="application/rss+xml" />
+    
+      
+      <item>
+        <title>One of std::string ctor</title>
+        <link>https://ghlecl.github.io/microposts/string_ctor/</link>
+        <pubDate>Tue, 18 Sep 2018 21:45:00 +0000</pubDate>
+        <author>codeattempts@gmail.com - Ghyslain Leclerc</author>
+        <guid>https://ghlecl.github.io/microposts/string_ctor/</guid>
+        <description>
+
+&lt;h1 id=&#34;std-string-from-c-style-string-ctor&#34;&gt;std::string from C style string ctor&lt;/h1&gt;
+
+&lt;p&gt;In writing a function template having to create a &lt;code&gt;std::string&lt;/code&gt; from a &lt;code&gt;char[]&lt;/code&gt;,
+I have had to use the following constructor of &lt;code&gt;std::string&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;basic_string( CharT const* s, size_type count, Allocator const&amp;amp; alloc = Allocator() );
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;which you can find documentation for in the standard or on &lt;a href=&#34;https://en.cppreference.com/w/cpp/string/basic_string/basic_string&#34; target=&#34;_blank&#34;&gt;cppreference.com&lt;/a&gt;.  In using
+this constructor, I have had a &amp;ldquo;off by one&amp;rdquo; problem with the &lt;code&gt;count&lt;/code&gt; parameter.
+The function template I originally wrote used the constructor like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt; std::size_t N &amp;gt;
+std::string foo( char const ( &amp;amp;char_arr )[N] ) {
+   return std::string the_strg( char_arr, N );  // WRONG, do not do this
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;which is a mistake.  The terminating &lt;code&gt;&#39;\0&#39;&lt;/code&gt; character will be included in the
+value of &lt;code&gt;N&lt;/code&gt; and will thus be part of the &lt;code&gt;std::string&lt;/code&gt; (which &lt;em&gt;can&lt;/em&gt; contain
+nulls).  Thus, the size of the new &lt;code&gt;std::string&lt;/code&gt; will be one more then expected:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;char const arr[] = &amp;quot;string&amp;quot;;
+auto bar = foo( arr );
+assert( bar.length() != 6 );
+assert( bar.length() == 7 );
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Usually, when one is certain that the C style string is null terminated, the
+recommended way to use the constructor is:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;std::string the_strg( char_arr, std::strlen( char_arr ) );
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Since &lt;code&gt;std::strlen&lt;/code&gt; will not include the null terminator in the length returned.
+To mimic this behavior, my template had to be written as:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-c++&#34;&gt;template&amp;lt; std::size_t N &amp;gt;
+std::string foo( char const ( &amp;amp;char_arr )[N] ) {
+   std::string the_strg( char_arr, N - 1 );
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;which will eliminate the need to calculate the length at runtime and yield the
+correct &lt;code&gt;std::string&lt;/code&gt; with the expected length.  This is not exactly a hard
+problem, but it bit me and I want to remember this little detail!&lt;/p&gt;
+</description>
+      </item>
+      
     
       
       <item>
@@ -2255,31 +2314,55 @@ see if this is something they will pursue.&lt;/p&gt;
 
 &lt;h1 id=&#34;friends-only-class&#34;&gt;Friends only class&lt;/h1&gt;
 
-&lt;p&gt;Having read &lt;a href=&#34;https://arne-mertz.de/2016/11/stronger-types/&#34; target=&#34;_blank&#34;&gt;a few&lt;/a&gt; &lt;a href=&#34;http://www.fluentcpp.com/2016/12/05/named-constructors/&#34; target=&#34;_blank&#34;&gt;blog posts&lt;/a&gt; and watched a short &lt;a href=&#34;https://youtube.com/watch?v=jLdSjh8oqmE&#34; target=&#34;_blank&#34;&gt;presentation&lt;/a&gt; on the subject of &lt;a href=&#34;http://foonathan.net/blog/2016/10/19/strong-typedefs.html&#34; target=&#34;_blank&#34;&gt;strong typedefs&lt;/a&gt;, I decided to look into their use and implementation.  In at least two implementations I have looked at (namely &lt;a href=&#34;https://github.com/foonathan/type_safe&#34; target=&#34;_blank&#34;&gt;type_safe&lt;/a&gt; and &lt;a href=&#34;https://sourceforge.net/projects/opaque-typedef/&#34; target=&#34;_blank&#34;&gt;opaque&lt;/a&gt;), I have found that mixin classes are used to add functionality to the new type.  For instance:&lt;/p&gt;
+&lt;p&gt;Having read &lt;a href=&#34;https://arne-mertz.de/2016/11/stronger-types/&#34; target=&#34;_blank&#34;&gt;a few&lt;/a&gt;
+&lt;a href=&#34;http://www.fluentcpp.com/2016/12/05/named-constructors/&#34; target=&#34;_blank&#34;&gt;blog posts&lt;/a&gt; and
+watched a short &lt;a href=&#34;https://youtube.com/watch?v=jLdSjh8oqmE&#34; target=&#34;_blank&#34;&gt;presentation&lt;/a&gt; on the
+subject of
+&lt;a href=&#34;http://foonathan.net/blog/2016/10/19/strong-typedefs.html&#34; target=&#34;_blank&#34;&gt;strong typedefs&lt;/a&gt;,
+I decided to look into their use and implementation.  In at least two
+implementations I have looked at (namely
+&lt;a href=&#34;https://github.com/foonathan/type_safe&#34; target=&#34;_blank&#34;&gt;type_safe&lt;/a&gt; and
+&lt;a href=&#34;https://sourceforge.net/projects/opaque-typedef/&#34; target=&#34;_blank&#34;&gt;opaque&lt;/a&gt;), I have found that
+mixin classes are used to add functionality to the new type.  For instance:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-C++&#34;&gt;class my_strong_typedef : public addable, public divisible
 {};
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;Those mixin were implemented as empty classes that only have friend functions in them.  I was wondering what was the use of such constructs.  Turns out, it is an application of the &lt;a href=&#34;https://en.wikipedia.org/wiki/Barton%E2%80%93Nackman_trick&#34; target=&#34;_blank&#34;&gt;Barton–Nackman trick&lt;/a&gt; to allow &lt;a href=&#34;https://en.wikipedia.org/wiki/Argument-dependent_name_lookup&#34; target=&#34;_blank&#34;&gt;argument dependent name lookup&lt;/a&gt; (ADL) to find the function.&lt;/p&gt;
+&lt;p&gt;Those mixin were implemented as empty classes that only have friend functions in
+them.  I was wondering what was the use of such constructs.  Turns out, it is an
+application of the &lt;a href=&#34;https://en.wikipedia.org/wiki/Barton%E2%80%93Nackman_trick&#34; target=&#34;_blank&#34;&gt;Barton–Nackman trick&lt;/a&gt; to allow
+&lt;a href=&#34;https://en.wikipedia.org/wiki/Argument-dependent_name_lookup&#34; target=&#34;_blank&#34;&gt;argument dependent name lookup&lt;/a&gt; (ADL) to find the
+function.&lt;/p&gt;
 
 &lt;p&gt;When the compiler sees the following expression:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-C++&#34;&gt;lt + rt
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;it must lookup the &lt;code&gt;operator+&lt;/code&gt; function to use with the types of &lt;code&gt;lt&lt;/code&gt; and &lt;code&gt;rt&lt;/code&gt;.  From my understanding, it is equivalent to an unqualified call to the operator, as in:&lt;/p&gt;
+&lt;p&gt;it must lookup the &lt;code&gt;operator+&lt;/code&gt; function to use with the types of &lt;code&gt;lt&lt;/code&gt; and &lt;code&gt;rt&lt;/code&gt;.
+From my understanding, it is equivalent to an unqualified call to the operator,
+as in:&lt;/p&gt;
 
 &lt;pre&gt;&lt;code class=&#34;language-C++&#34;&gt;operator+( lt, rt )
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;The various &lt;a href=&#34;http://en.cppreference.com/w/cpp/language/lookup&#34; target=&#34;_blank&#34;&gt;name lookup&lt;/a&gt; rules of C++, which are not so simple, are then used to find which function to call and an important aspect in this case is that during ADL:&lt;/p&gt;
+&lt;p&gt;The various &lt;a href=&#34;http://en.cppreference.com/w/cpp/language/lookup&#34; target=&#34;_blank&#34;&gt;name lookup&lt;/a&gt;
+rules of C++, which are not so simple, are then used to find which function to
+call and an important aspect in this case is that during ADL:&lt;/p&gt;
 
 &lt;blockquote&gt;
-&lt;p&gt;namespace-scoped friend functions (and function templates) that are declared in an associated class are visible through ADL even if they are not visible through ordinary lookup&lt;/p&gt;
+&lt;p&gt;namespace-scoped friend functions (and function templates) that are declared
+in an associated class are visible through ADL even if they are not visible
+through ordinary lookup&lt;/p&gt;
 &lt;/blockquote&gt;
 
-&lt;p&gt;which is a quote from the cppreference website.  Because of that part of the standard, an operator defined as a friend in a class of which your class inherits is found.  With this trick, you can, as other libraries have done, create multiple mixin classes from which your primary class inherits and ADL will find the functions.  The empty classes should mostly (if not completely) be optimized away by the compiler.&lt;/p&gt;
+&lt;p&gt;which is a quote from the cppreference website.  Because of that part of the
+standard, an operator defined as a friend in a class of which your class
+inherits is found.  With this trick, you can, as other libraries have done,
+create multiple mixin classes from which your primary class inherits and ADL
+will find the functions.  The empty classes should mostly (if not completely)
+be optimized away by the compiler.&lt;/p&gt;
 </description>
       </item>
       

@@ -57,31 +57,55 @@
 
 <h1 id="friends-only-class">Friends only class</h1>
 
-<p>Having read <a href="https://arne-mertz.de/2016/11/stronger-types/" target="_blank">a few</a> <a href="http://www.fluentcpp.com/2016/12/05/named-constructors/" target="_blank">blog posts</a> and watched a short <a href="https://youtube.com/watch?v=jLdSjh8oqmE" target="_blank">presentation</a> on the subject of <a href="http://foonathan.net/blog/2016/10/19/strong-typedefs.html" target="_blank">strong typedefs</a>, I decided to look into their use and implementation.  In at least two implementations I have looked at (namely <a href="https://github.com/foonathan/type_safe" target="_blank">type_safe</a> and <a href="https://sourceforge.net/projects/opaque-typedef/" target="_blank">opaque</a>), I have found that mixin classes are used to add functionality to the new type.  For instance:</p>
+<p>Having read <a href="https://arne-mertz.de/2016/11/stronger-types/" target="_blank">a few</a>
+<a href="http://www.fluentcpp.com/2016/12/05/named-constructors/" target="_blank">blog posts</a> and
+watched a short <a href="https://youtube.com/watch?v=jLdSjh8oqmE" target="_blank">presentation</a> on the
+subject of
+<a href="http://foonathan.net/blog/2016/10/19/strong-typedefs.html" target="_blank">strong typedefs</a>,
+I decided to look into their use and implementation.  In at least two
+implementations I have looked at (namely
+<a href="https://github.com/foonathan/type_safe" target="_blank">type_safe</a> and
+<a href="https://sourceforge.net/projects/opaque-typedef/" target="_blank">opaque</a>), I have found that
+mixin classes are used to add functionality to the new type.  For instance:</p>
 
 <pre><code class="language-C++">class my_strong_typedef : public addable, public divisible
 {};
 </code></pre>
 
-<p>Those mixin were implemented as empty classes that only have friend functions in them.  I was wondering what was the use of such constructs.  Turns out, it is an application of the <a href="https://en.wikipedia.org/wiki/Barton%E2%80%93Nackman_trick" target="_blank">Barton–Nackman trick</a> to allow <a href="https://en.wikipedia.org/wiki/Argument-dependent_name_lookup" target="_blank">argument dependent name lookup</a> (ADL) to find the function.</p>
+<p>Those mixin were implemented as empty classes that only have friend functions in
+them.  I was wondering what was the use of such constructs.  Turns out, it is an
+application of the <a href="https://en.wikipedia.org/wiki/Barton%E2%80%93Nackman_trick" target="_blank">Barton–Nackman trick</a> to allow
+<a href="https://en.wikipedia.org/wiki/Argument-dependent_name_lookup" target="_blank">argument dependent name lookup</a> (ADL) to find the
+function.</p>
 
 <p>When the compiler sees the following expression:</p>
 
 <pre><code class="language-C++">lt + rt
 </code></pre>
 
-<p>it must lookup the <code>operator+</code> function to use with the types of <code>lt</code> and <code>rt</code>.  From my understanding, it is equivalent to an unqualified call to the operator, as in:</p>
+<p>it must lookup the <code>operator+</code> function to use with the types of <code>lt</code> and <code>rt</code>.
+From my understanding, it is equivalent to an unqualified call to the operator,
+as in:</p>
 
 <pre><code class="language-C++">operator+( lt, rt )
 </code></pre>
 
-<p>The various <a href="http://en.cppreference.com/w/cpp/language/lookup" target="_blank">name lookup</a> rules of C++, which are not so simple, are then used to find which function to call and an important aspect in this case is that during ADL:</p>
+<p>The various <a href="http://en.cppreference.com/w/cpp/language/lookup" target="_blank">name lookup</a>
+rules of C++, which are not so simple, are then used to find which function to
+call and an important aspect in this case is that during ADL:</p>
 
 <blockquote>
-<p>namespace-scoped friend functions (and function templates) that are declared in an associated class are visible through ADL even if they are not visible through ordinary lookup</p>
+<p>namespace-scoped friend functions (and function templates) that are declared
+in an associated class are visible through ADL even if they are not visible
+through ordinary lookup</p>
 </blockquote>
 
-<p>which is a quote from the cppreference website.  Because of that part of the standard, an operator defined as a friend in a class of which your class inherits is found.  With this trick, you can, as other libraries have done, create multiple mixin classes from which your primary class inherits and ADL will find the functions.  The empty classes should mostly (if not completely) be optimized away by the compiler.</p>
+<p>which is a quote from the cppreference website.  Because of that part of the
+standard, an operator defined as a friend in a class of which your class
+inherits is found.  With this trick, you can, as other libraries have done,
+create multiple mixin classes from which your primary class inherits and ADL
+will find the functions.  The empty classes should mostly (if not completely)
+be optimized away by the compiler.</p>
 
   <a href='https://ghlecl.github.io/microposts/friends_only_class/'><aside class="dates">→ 2017/11/28 1:30 PM</aside></a>
 </article>
