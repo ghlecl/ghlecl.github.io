@@ -69,7 +69,7 @@ The function template I originally wrote used the constructor like this:</p>
 
 <pre><code class="language-c++">template&lt; std::size_t N &gt;
 std::string foo( char const ( &amp;char_arr )[N] ) {
-   return std::string the_strg( char_arr, N );  // WRONG, do not do this
+   return std::string( char_arr, N );  // WRONG, do not do this
 }
 </code></pre>
 
@@ -94,13 +94,21 @@ To mimic this behavior, my template had to be written as:</p>
 
 <pre><code class="language-c++">template&lt; std::size_t N &gt;
 std::string foo( char const ( &amp;char_arr )[N] ) {
-   std::string the_strg( char_arr, N - 1 );
+   return std::string( char_arr, N - 1 );
 }
 </code></pre>
 
 <p>which will eliminate the need to calculate the length at runtime and yield the
 correct <code>std::string</code> with the expected length.  This is not exactly a hard
 problem, but it bit me and I want to remember this little detail!</p>
+
+<hr />
+
+<p>Edit (2018-09-19):
+<a href="https://twitter.com/PatriceRoy1" target="_blank">Patrice Roy</a> pointed out that my return
+statement in the first function was awkward (copy pasting and modifying to make
+an example is not ideal) and the second version was not returning anything.
+Fixed now.  Thanks Patrice for pointing it out.</p>
 
   <a href='https://ghlecl.github.io/microposts/string_ctor/'><aside class="dates">→ 2018/09/18 9:45 PM</aside></a>
 </article>
