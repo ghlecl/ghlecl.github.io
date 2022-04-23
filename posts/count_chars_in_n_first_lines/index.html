@@ -9,7 +9,7 @@
   <meta name="description" content="Personnal notes on code">
   <link rel="alternate" type="application/atom+xml" title="RSS" href="https://ghlecl.github.io/atom.xml">
   <link rel="stylesheet" href="https://ghlecl.github.io/css/weblog.css" media="screen" charset="utf-8" />
-  <title>About me &middot; ghlecl's code attempts</title>
+  <title>Count chars in lines &middot; ghlecl's code attempts</title>
 </head>
 
 <body class="site">
@@ -27,20 +27,24 @@
     </nav>
   </header>
   
-    <main class="content">
-    <article class="page">
-      <p>
-        <p>Hi.
-I'm Ghys, a French Canadian living in the province of Québec, Canada.
-I make a living as a medical physicist.
-I like trying to get computers to do the actual data crunching for me.
-I am a hobbyist programmer and this blog is mostly a way for me to write down notes and lessons about my code attempts.
-I also write about random stuff.
-Feel free to read or skip whatever you want!</p>
+  <main class="content">
+    <article class="post">
+      <h1 class="title">Count chars in lines</h1>
+      <div class="postmeta">
+        Posted on <time datetime="2017-11-22 12:30" pubdate="">2017-11-22</time>
+      </div>
+      <h1 id="Counting_chars_in_first_n_lines">Counting chars in first n lines</h1>
+<p>I was coding in one of my projects and wanted to make sure that the position I was finding in a file was correct.
+In a first attempt, I tried copy-pasting the content of the file up to the position I was searching for into Microsoft Excel™ to find the length of the resulting string.
+Turns out a naive copy-paste does not preserve whitespace.</p>
+<p>I then thought of writing a small application to do what I wanted: open a file, read the <code>n</code> first lines and find the total number of characters (bad reflex, I know).
+In trying to figure out the command line interface for this, I realized first that it would be a lot of work for something that I might not use often and second, that there might be an easier way on a *Nix system.</p>
+<p>This lead me to simply using the applications <a href="http://man7.org/linux/man-pages/man1/head.1.html">head</a> and <a href="http://man7.org/linux/man-pages/man1/wc.1.html">wc</a> as follows:</p>
+<pre data-lang="bash" style="background-color:#1d1f21;color:#c5c8c6;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#cc6666;">head</span><span style="color:#de935f;"> -n </span><span style="color:#8abeb7;">&lt;</span><span style="color:#81a2be;">line_count</span><span style="color:#8abeb7;">&gt; | </span><span style="color:#cc6666;">wc</span><span style="color:#de935f;"> -m
+</span></code></pre>
 
-      </p>
     </article>
-    </main>
+  </main>
 
 
   <footer>

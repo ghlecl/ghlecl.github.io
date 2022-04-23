@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Ghyslain Leclerc">
+  <meta name="description" content="Personnal notes on code">
+  <link rel="alternate" type="application/atom+xml" title="RSS" href="https://ghlecl.github.io/atom.xml">
+  <link rel="stylesheet" href="https://ghlecl.github.io/css/weblog.css" media="screen" charset="utf-8" />
+  <title>Timing pieces of code &middot; ghlecl's code attempts</title>
+</head>
+
+<body class="site">
+  <header>
+    <nav>
+      <h1><a href="/">@ghlecl</a>'s Code Attempts.</h1>
+      <div class="menu">
+        <ul>
+          <li>
+            <a href="https://ghlecl.github.io/posts/">Posts<img src="/img/atom.svg" class="rss-icon" /></a>
+          </li>
+          <li><a href="https://ghlecl.github.io/about/">About</a></li>
+        </ul>
+      </div>
+    </nav>
+  </header>
+  
+  <main class="content">
+    <article class="post">
+      <h1 class="title">Timing pieces of code</h1>
+      <div class="postmeta">
+        Posted on <time datetime="2016-03-20 19:43" pubdate="">2016-03-20</time>
+      </div>
+      <h1 id="Execution_time_measurements">Execution time measurements</h1>
+<h3 id="Python's_timeit_and_repeat">Python's timeit and repeat</h3>
+<p>I sometimes want to time my code to see which version of a function I wrote runs faster.
+I know that you should <em><strong>always</strong></em> profile before you optimize and that <a href="https://en.wikipedia.org/wiki/Benchmark_%28computing%29#Types_of_benchmarks">micro-benchmarking</a> has <a href="http://stackoverflow.com/a/2842707">lots of caveats</a> (some of which I have myself fallen victim to), but still, sometimes, curiosity gets the best of me and I just have to know.
+When I am writing in Python, I use the <code>timeit</code> <a href="https://docs.python.org/3/library/timeit.html?highlight=timeit#module-timeit">module</a> to measure code execution.
+This handy module has two main utility functions: <code>timeit</code> and <code>repeat</code>.</p>
+<p><code>timeit</code> will run a piece of code <code>n</code> times while measuring the execution time of each repetition.
+It then gives back the lowest time, which is arguably the time needed to run the code when nothing else on the system is interfering.
+Of course, when the code will be run, other things will want CPU time alongside your program and the OS will have to balance it all, but <em>usually</em>, that should not be taken into account when doing micro-benchmarks.</p>
+<p><code>repeat</code> will again run a piece of code <code>n</code> times, but will repeat that experiment <code>r</code> times, returning a list with the lowest execution time of each repetition of the experiment.
+The following snippet shows how to use both of them in code.</p>
+<pre data-lang="python" style="background-color:#1d1f21;color:#c5c8c6;" class="language-python "><code class="language-python" data-lang="python"><span style="color:#b294bb;">from </span><span>timeit </span><span style="color:#b294bb;">import </span><span>timeit, repeat
+</span><span>
+</span><span>n </span><span style="color:#8abeb7;">= </span><span style="color:#de935f;">1000
+</span><span>r </span><span style="color:#8abeb7;">= </span><span style="color:#de935f;">2
+</span><span>times_repeat </span><span style="color:#8abeb7;">= </span><span style="color:#cc6666;">repeat</span><span style="color:#81a2be;">( </span><span style="color:#b5bd68;">&quot;def Fn( x ): return x**2;myFn( 4 )&quot;</span><span style="color:#81a2be;">, </span><span style="color:#de935f;">repeat </span><span style="color:#8abeb7;">= </span><span style="color:#81a2be;">r, </span><span style="color:#de935f;">number </span><span style="color:#8abeb7;">= </span><span style="color:#81a2be;">n )
+</span><span>times_timeit </span><span style="color:#8abeb7;">= </span><span>[]
+</span><span style="color:#b294bb;">for </span><span>idx </span><span style="color:#b294bb;">in </span><span style="color:#81a2be;">range( r )</span><span>:
+</span><span>    </span><span style="color:#81a2be;">times_timeit.</span><span style="color:#cc6666;">append</span><span style="color:#81a2be;">( </span><span style="color:#cc6666;">timeit</span><span style="color:#81a2be;">( </span><span style="color:#b5bd68;">&quot;def Fn( x ): return x**2;myFn( 4 )&quot;</span><span style="color:#81a2be;">, </span><span style="color:#de935f;">number </span><span style="color:#8abeb7;">= </span><span style="color:#81a2be;">n ) )
+</span></code></pre>
+<p>There are two other ways to use the <code>timeit</code> module, namely via the command line with the executable module syntax and using an interactive Python shell like <a href="https://ipython.org/">iPython</a> which has the magic function <code>%timeit</code>.
+I won't cover those subjects here.</p>
+<h3 id="Trying_it_out_in_C++:_time_it">Trying it out in C++: time_it</h3>
+<p>The thing is, I don't always do things in Python and I wanted to have a function similar to <code>timeit</code> which would allow me to measure the execution time of a function or piece of code in C++.
+It turns out that with C++14 (don't know if C++11 is sufficient, but C++17/C++1z will make it easier I think), it is possible to get close to it.
+When I got the idea, I started to think about the <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4169.html">proposed</a> <code>std::invoke</code> function that should (or has?) make it into the next standard.
+This function template takes a function, it's arguments and invokes it.
+This is pretty close to what I need.
+Coupling the facilities of <code>std::chrono</code> with that function could actually get me pretty close to what I want.
+Because some compilers do not yet have an implementation of <code>std::invoke</code>, I had to first find one or write one.
+I decided to use the implementation found on <a href="http://en.cppreference.com/w/cpp/utility/functional/invoke">cppreference.com</a>.
+But let's pretend that std::invoke is available.
+Then, one can write the function template <code>time_it</code><sup id="ftntref:1"><a href="#ftnt:1">1</a></sup> using <code>std::invoke</code> and <code>std::chrono</code>.
+This is the resulting function for those who do not want to read the steps I went through:</p>
+<pre data-lang="cpp" style="background-color:#1d1f21;color:#c5c8c6;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="color:#b294bb;">template</span><span>&lt;
+</span><span>   </span><span style="color:#b294bb;">unsigned int</span><span> repeat_invoke </span><span style="color:#8abeb7;">= </span><span style="color:#de935f;">1000</span><span>,
+</span><span>   </span><span style="color:#b294bb;">unsigned int</span><span> repeat_meas </span><span style="color:#8abeb7;">= </span><span style="color:#de935f;">3</span><span>,
+</span><span>   </span><span style="color:#b294bb;">typename</span><span> F, </span><span style="color:#b294bb;">typename</span><span style="color:#8abeb7;">...</span><span> ArgTypes
+</span><span>        &gt;
+</span><span>std::array&lt; </span><span style="color:#b294bb;">double</span><span>, repeat_meas &gt;
+</span><span style="color:#81a2be;">time_it</span><span>( F</span><span style="color:#8abeb7;">&amp;&amp; </span><span style="color:#de935f;">f</span><span>, ArgTypes</span><span style="color:#8abeb7;">&amp;&amp;... </span><span style="color:#de935f;">args </span><span>)
+</span><span>{
+</span><span>   </span><span style="color:#b294bb;">using</span><span> std::chrono::high_resolution_clock;
+</span><span>   </span><span style="color:#b294bb;">using</span><span> std::chrono::duration_cast;
+</span><span>   </span><span style="color:#b294bb;">using</span><span> std::numeric_limits;
+</span><span>   </span><span style="color:#b294bb;">using</span><span> std::chrono::nanoseconds;
+</span><span>
+</span><span>   </span><span style="color:#8abeb7;">static_assert</span><span>( repeat_invoke </span><span style="color:#8abeb7;">&gt;= </span><span style="color:#de935f;">1</span><span>,
+</span><span>            </span><span style="color:#b5bd68;">&quot;time_it: The number of times the code experiment is \
+</span><span style="color:#b5bd68;">                                          repeated has to be at least 1.&quot; </span><span>);
+</span><span>   </span><span style="color:#8abeb7;">static_assert</span><span>( repeat_meas </span><span style="color:#8abeb7;">&gt;= </span><span style="color:#de935f;">1</span><span>,
+</span><span>            </span><span style="color:#b5bd68;">&quot;time_it: The number of times the code is run has to \
+</span><span style="color:#b5bd68;">                                                          be at least 1.&quot; </span><span>);
+</span><span>
+</span><span>   </span><span style="color:#b294bb;">double</span><span> max_dbl </span><span style="color:#8abeb7;">=</span><span> numeric_limits&lt;</span><span style="color:#b294bb;">double</span><span>&gt;</span><span style="color:#81a2be;">::</span><span style="color:#cc6666;">max</span><span style="color:#81a2be;">()</span><span>;
+</span><span>   </span><span style="color:#b294bb;">double</span><span> cur_min </span><span style="color:#8abeb7;">=</span><span> max_dbl;
+</span><span>   std::array&lt; </span><span style="color:#b294bb;">double</span><span>, repeat_meas &gt; shortest_times;
+</span><span>   </span><span style="color:#b294bb;">for</span><span>( </span><span style="color:#b294bb;">unsigned int </span><span style="color:#cc6666;">meas_idx</span><span style="color:#81a2be;">( </span><span style="color:#de935f;">0 </span><span style="color:#81a2be;">)</span><span>; meas_idx </span><span style="color:#8abeb7;">!=</span><span> repeat_meas; </span><span style="color:#8abeb7;">++</span><span>meas_idx )
+</span><span>   {
+</span><span>      </span><span style="color:#b294bb;">for</span><span>( </span><span style="color:#b294bb;">unsigned int </span><span style="color:#cc6666;">invoke_idx</span><span style="color:#81a2be;">( </span><span style="color:#de935f;">0 </span><span style="color:#81a2be;">)</span><span>; invoke_idx </span><span style="color:#8abeb7;">!=</span><span> repeat_invoke; </span><span style="color:#8abeb7;">++</span><span>invoke_idx )
+</span><span>      {
+</span><span>         </span><span style="color:#b294bb;">auto</span><span> start </span><span style="color:#8abeb7;">= </span><span style="color:#81a2be;">high_resolution_clock::</span><span style="color:#cc6666;">now</span><span style="color:#81a2be;">()</span><span>;
+</span><span>
+</span><span>         </span><span style="color:#81a2be;">std::</span><span style="color:#cc6666;">invoke</span><span style="color:#81a2be;">( std::</span><span style="color:#cc6666;">forward</span><span style="color:#81a2be;">&lt;F&gt;(f), std::</span><span style="color:#cc6666;">forward</span><span style="color:#81a2be;">&lt;ArgTypes&gt;(args)</span><span style="color:#8abeb7;">... </span><span style="color:#81a2be;">)</span><span>;
+</span><span>
+</span><span>         </span><span style="color:#b294bb;">auto</span><span> elapsed </span><span style="color:#8abeb7;">= </span><span style="color:#cc6666;">duration_cast</span><span style="color:#81a2be;">&lt; nanoseconds &gt;(
+</span><span style="color:#81a2be;">                        high_resolution_clock::</span><span style="color:#cc6666;">now</span><span style="color:#81a2be;">() </span><span style="color:#8abeb7;">-</span><span style="color:#81a2be;"> start )</span><span>.</span><span style="color:#cc6666;">count</span><span>();
+</span><span>
+</span><span>         </span><span style="color:#b294bb;">if</span><span>( elapsed </span><span style="color:#8abeb7;">&lt;</span><span> cur_min ) { cur_min </span><span style="color:#8abeb7;">=</span><span> elapsed; }
+</span><span>      }
+</span><span>      shortest_times[meas_idx] </span><span style="color:#8abeb7;">=</span><span> cur_min;
+</span><span>      cur_min </span><span style="color:#8abeb7;">=</span><span> max_dbl;
+</span><span>   }
+</span><span>
+</span><span>   </span><span style="color:#b294bb;">return</span><span> shortest_times;
+</span><span>}
+</span></code></pre>
+<p>I skipped the includes in this code snippet.
+I am not pretending this code is exception safe, thread safe or any other kind of safe there is.
+I am not suggesting anybody else should use it.
+It's simply something I find useful.</p>
+<h3 id="How_I_got_there">How I got there</h3>
+<p>Basically, aside from the boiler plate stuff, the function is one that takes another function and its parameters as input, and then outputs the minimum time taken to execute the code.
+The initial declaration could be written as follows:</p>
+<pre data-lang="cpp" style="background-color:#1d1f21;color:#c5c8c6;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="color:#b294bb;">template</span><span>&lt; </span><span style="color:#b294bb;">typename</span><span> F, </span><span style="color:#b294bb;">typename</span><span style="color:#8abeb7;">...</span><span> ArgTypes &gt;
+</span><span style="color:#b294bb;">double </span><span style="color:#81a2be;">time_it</span><span>( F</span><span style="color:#8abeb7;">&amp;&amp; </span><span style="color:#de935f;">f</span><span>, ArgTypes</span><span style="color:#8abeb7;">&amp;&amp;... </span><span style="color:#de935f;">args </span><span>);
+</span></code></pre>
+<p>This definition uses variadic templates.
+You can find information on variadic templates on <a href="https://en.wikipedia.org/wiki/Variadic_template">various</a> <a href="http://en.cppreference.com/w/cpp/language/parameter_pack">sites</a>.
+The problem I had with that first iteration is that I could not specify the number of repetitions or the number of times I wanted to run the timing experiment (equivalent to the <code>n</code> and <code>r</code> parameters of Python's <code>timeit</code>).
+I had to find a way to do that which would allow for default values as well, since I did not want to specify those arguments every time I call the function.
+To be able to use default values in C++, the defaulted parameters have to be last (no keyword arguments in C++ land).
+That presented a problem because I also have to have a parameter pack.
+So to work around that, I introduced two defaulted template arguments like this:</p>
+<pre data-lang="cpp" style="background-color:#1d1f21;color:#c5c8c6;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="color:#b294bb;">template</span><span>&lt;
+</span><span>   </span><span style="color:#b294bb;">unsigned int</span><span> repeat_invoke </span><span style="color:#8abeb7;">= </span><span style="color:#de935f;">1000</span><span>,
+</span><span>   </span><span style="color:#b294bb;">unsigned int</span><span> repeat_meas </span><span style="color:#8abeb7;">= </span><span style="color:#de935f;">3</span><span>,
+</span><span>   </span><span style="color:#b294bb;">typename</span><span> F,
+</span><span>   </span><span style="color:#b294bb;">typename</span><span style="color:#8abeb7;">...</span><span> ArgTypes
+</span><span>        &gt;
+</span><span>std::array&lt; </span><span style="color:#b294bb;">double</span><span>, repeat_meas &gt;
+</span><span style="color:#81a2be;">time_it</span><span>( F</span><span style="color:#8abeb7;">&amp;&amp; </span><span style="color:#de935f;">f</span><span>, ArgTypes</span><span style="color:#8abeb7;">&amp;&amp;... </span><span style="color:#de935f;">args </span><span>);
+</span></code></pre>
+<p>Sorry for the reformatting of the template declaration.
+I must admit I struggle to have a consistent formatting for templates.
+I find nothing is completely satisfying.
+I should probably just use <a href="http://clang.llvm.org/docs/ClangFormat.html">Clang Format</a>.
+Anyhow, back to my function.
+The addition of the two template arguments allowed me to change the return type to an array and I now have the functionality I want: I can specify, albeit as template parameters, the number of repetitions and the number of invocations at the call site.
+All that was left to do was write the timing code, since the function invocation itself is simply:</p>
+<pre data-lang="cpp" style="background-color:#1d1f21;color:#c5c8c6;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span>std::</span><span style="color:#81a2be;">invoke</span><span>( std::forward&lt;F&gt;(f), std::forward&lt;ArgTypes&gt;(args)</span><span style="color:#8abeb7;">... </span><span>);
+</span></code></pre>
+<p>The use of <code>std::forward</code> in the code here is for efficiency.
+The timing code is based on <code>std::chrono::high_resolution_clock</code>.
+I chose to simply record the time before the invocation with <code>std::chrono::high_resolution_clock::now()</code> and do the same after.
+The difference is the elapsed time.
+The choice of the clock could be discussed.
+The most important thing is for the clock to be steady.</p>
+<h3 id="Example_/_test">Example / test</h3>
+<p>I have written a function which will make the current thread sleep for ten milliseconds.
+Then, I have used my new <code>time_it</code> function to time the execution of the defined function.
+The code is reproduced here and actually serves as a usage example.
+There are also two calls with a lambda function, one taking arguments.</p>
+<pre data-lang="cpp" style="background-color:#1d1f21;color:#c5c8c6;" class="language-cpp "><code class="language-cpp" data-lang="cpp"><span style="color:#b294bb;">void </span><span style="color:#81a2be;">my_fn</span><span>()
+</span><span>{
+</span><span>   </span><span style="color:#b294bb;">using namespace</span><span> std::chrono_literals;
+</span><span>   </span><span style="color:#81a2be;">std::this_thread::</span><span style="color:#cc6666;">sleep_for</span><span style="color:#81a2be;">( </span><span style="color:#de935f;">10</span><span style="color:#b294bb;">ms </span><span style="color:#81a2be;">)</span><span>;
+</span><span>}
+</span><span>
+</span><span style="color:#b294bb;">int </span><span style="color:#81a2be;">main</span><span>( </span><span style="color:#b294bb;">int </span><span style="color:#de935f;">argc</span><span>, </span><span style="color:#b294bb;">char</span><span style="color:#8abeb7;">* </span><span style="color:#de935f;">argv</span><span>[] )
+</span><span>{
+</span><span>   </span><span style="color:#969896;">// get times
+</span><span>   </span><span style="color:#b294bb;">auto</span><span> test_val_0 </span><span style="color:#8abeb7;">= </span><span style="color:#cc6666;">time_it</span><span style="color:#81a2be;">( my_fn )</span><span>;
+</span><span>   </span><span style="color:#b294bb;">auto</span><span> test_val_1 </span><span style="color:#8abeb7;">= </span><span style="color:#cc6666;">time_it</span><span style="color:#81a2be;">&lt; </span><span style="color:#de935f;">100</span><span style="color:#81a2be;">, </span><span style="color:#de935f;">6 </span><span style="color:#81a2be;">&gt;( my_fn )</span><span>;
+</span><span>   </span><span style="color:#b294bb;">auto</span><span> test_val_2 </span><span style="color:#8abeb7;">= </span><span style="color:#cc6666;">time_it</span><span style="color:#81a2be;">&lt; </span><span style="color:#de935f;">500 </span><span style="color:#81a2be;">&gt;( my_fn )</span><span>;
+</span><span>   </span><span style="color:#b294bb;">auto</span><span> test_val_3 </span><span style="color:#8abeb7;">= </span><span style="color:#cc6666;">time_it</span><span style="color:#81a2be;">&lt; </span><span style="color:#de935f;">1000</span><span style="color:#81a2be;">, </span><span style="color:#de935f;">2 </span><span style="color:#81a2be;">&gt;( my_fn )</span><span>;
+</span><span>   </span><span style="color:#b294bb;">auto</span><span> test_val_4 </span><span style="color:#8abeb7;">= </span><span style="color:#cc6666;">time_it</span><span style="color:#81a2be;">&lt; </span><span style="color:#de935f;">1000</span><span style="color:#81a2be;">, </span><span style="color:#de935f;">8 </span><span style="color:#81a2be;">&gt;( [](){
+</span><span style="color:#81a2be;">            </span><span style="color:#b294bb;">using namespace</span><span style="color:#81a2be;"> std::chrono_literals;
+</span><span style="color:#81a2be;">            std::this_thread::</span><span style="color:#cc6666;">sleep_for</span><span style="color:#81a2be;">( </span><span style="color:#de935f;">5</span><span style="color:#b294bb;">ms </span><span style="color:#81a2be;">);
+</span><span style="color:#81a2be;">         } )</span><span>;
+</span><span>   </span><span style="color:#b294bb;">auto</span><span> test_val_5 </span><span style="color:#8abeb7;">= </span><span style="color:#cc6666;">time_it</span><span style="color:#81a2be;">&lt; </span><span style="color:#de935f;">1000</span><span style="color:#81a2be;">, </span><span style="color:#de935f;">3 </span><span style="color:#81a2be;">&gt;( []( </span><span style="color:#b294bb;">int</span><span style="color:#81a2be;"> lt, </span><span style="color:#b294bb;">int</span><span style="color:#81a2be;"> rt ){
+</span><span style="color:#81a2be;">            </span><span style="color:#b294bb;">return</span><span style="color:#81a2be;"> lt </span><span style="color:#8abeb7;">-</span><span style="color:#81a2be;"> rt;
+</span><span style="color:#81a2be;">         }, </span><span style="color:#de935f;">5</span><span style="color:#81a2be;">, </span><span style="color:#de935f;">7 </span><span style="color:#81a2be;">)</span><span>;
+</span><span>
+</span><span>   </span><span style="color:#969896;">// output results
+</span><span>   std::cout </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;exp 0: [ &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span> test_val_0[</span><span style="color:#de935f;">0</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_0[</span><span style="color:#de935f;">1</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_0[</span><span style="color:#de935f;">2</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0 </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot; ]</span><span style="color:#de935f;">\n</span><span style="color:#b5bd68;">&quot;</span><span>;
+</span><span>   std::cout </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;exp 1: [ &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span> test_val_1[</span><span style="color:#de935f;">0</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_1[</span><span style="color:#de935f;">1</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_1[</span><span style="color:#de935f;">2</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_1[</span><span style="color:#de935f;">3</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_1[</span><span style="color:#de935f;">4</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_1[</span><span style="color:#de935f;">5</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0 </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot; ]</span><span style="color:#de935f;">\n</span><span style="color:#b5bd68;">&quot;</span><span>;
+</span><span>   std::cout </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;exp 2: [ &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span> test_val_2[</span><span style="color:#de935f;">0</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_2[</span><span style="color:#de935f;">1</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_2[</span><span style="color:#de935f;">2</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0 </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot; ]</span><span style="color:#de935f;">\n</span><span style="color:#b5bd68;">&quot;</span><span>;
+</span><span>   std::cout </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;exp 3: [ &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span> test_val_3[</span><span style="color:#de935f;">0</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_3[</span><span style="color:#de935f;">1</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0 </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot; ]</span><span style="color:#de935f;">\n</span><span style="color:#b5bd68;">&quot;</span><span>;
+</span><span>   std::cout </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;exp 4: [ &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span> test_val_4[</span><span style="color:#de935f;">0</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_4[</span><span style="color:#de935f;">1</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_4[</span><span style="color:#de935f;">2</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_4[</span><span style="color:#de935f;">3</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_4[</span><span style="color:#de935f;">4</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_4[</span><span style="color:#de935f;">5</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_4[</span><span style="color:#de935f;">6</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_4[</span><span style="color:#de935f;">7</span><span>] </span><span style="color:#8abeb7;">/ </span><span style="color:#de935f;">1000000.0 </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot; ]</span><span style="color:#de935f;">\n</span><span style="color:#b5bd68;">&quot;</span><span>;
+</span><span>   std::cout </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;exp 5: [ &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span> test_val_5[</span><span style="color:#de935f;">0</span><span>]
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_5[</span><span style="color:#de935f;">1</span><span>]
+</span><span>             </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot;, &quot; </span><span style="color:#8abeb7;">&lt;&lt;</span><span>  test_val_5[</span><span style="color:#de935f;">2</span><span>] </span><span style="color:#8abeb7;">&lt;&lt; </span><span style="color:#b5bd68;">&quot; ]</span><span style="color:#de935f;">\n</span><span style="color:#b5bd68;">&quot;</span><span>;
+</span><span>   </span><span style="color:#b294bb;">return </span><span style="color:#de935f;">0</span><span>;
+</span><span>}
+</span></code></pre>
+<p>and the output on my machine is:</p>
+<pre data-lang="bash" style="background-color:#1d1f21;color:#c5c8c6;" class="language-bash "><code class="language-bash" data-lang="bash"><span style="color:#cc6666;">exp</span><span style="color:#81a2be;"> 0: </span><span style="color:#b294bb;">[</span><span style="color:#81a2be;"> 10.0203, 10.0184, 10.0266 </span><span style="color:#b294bb;">]
+</span><span style="color:#cc6666;">exp</span><span style="color:#81a2be;"> 1: </span><span style="color:#b294bb;">[</span><span style="color:#81a2be;"> 10.0465, 10.0373, 10.0241, 10.0198, 10.0214, 10.0243 </span><span style="color:#b294bb;">]
+</span><span style="color:#cc6666;">exp</span><span style="color:#81a2be;"> 2: </span><span style="color:#b294bb;">[</span><span style="color:#81a2be;"> 10.0152, 10.0176, 10.0305 </span><span style="color:#b294bb;">]
+</span><span style="color:#cc6666;">exp</span><span style="color:#81a2be;"> 3: </span><span style="color:#b294bb;">[</span><span style="color:#81a2be;"> 10.02, 10.0174 </span><span style="color:#b294bb;">]
+</span><span style="color:#cc6666;">exp</span><span style="color:#81a2be;"> 4: </span><span style="color:#b294bb;">[</span><span style="color:#81a2be;"> 5.01679, 5.01788, 5.01327, 5.01883, 5.02777, 5.02198, 5.01831, 5.01463 </span><span style="color:#b294bb;">]
+</span><span style="color:#cc6666;">exp</span><span style="color:#81a2be;"> 5: </span><span style="color:#b294bb;">[</span><span style="color:#81a2be;"> 55, 55, 55 </span><span style="color:#b294bb;">]
+</span></code></pre>
+<p>which, for the four first cases, is slightly more than 10ms and is what was expected.
+The expected value for the experiment labeled 4 is slightly higher than 5 ms and for the last lambda, it should be in the nanoseconds range, which it is.
+Of course, the constant value is suspicious and probably means the actual value is actually lower, but the <code>time_it</code> overhead and the clock precision is so that nothing below the 55ns value can be measured on my machine.
+I have not determined the error bar on the time measurement.
+This is a complex subject and much more work would be needed to test for that.
+One other thing I have not tried in this example is the timing of a member function, but it should work.</p>
+<h3 id="What_is_impossible">What is impossible</h3>
+<p>There are things I have found are not possible with the function as it stands.
+One of them is the inability to pass <code>time_it</code> a template function as an argument without specifying the template arguments of the passed in (or timed) function.
+I might be wrong, but I have not found a way to do that.
+Explicit argument passing is tedious and so <code>time_it</code> might not be very useful in those cases.</p>
+<p>One other capability Python's <code>timeit</code> has that this one does not is the ability to accept setup code which is executed before the experiment is run.
+I am not sure how useful that would be in the context of C++.
+Of course, I can't imagine what others would use <code>time_it</code> for, so it might be useful even though I can't see it, but I am not writing the STL!
+It's just that in my view, since C++ is compiled and not interpreted, <code>time_it</code> will still require a main function and an executable to run, unlike Python's <code>timeit</code> which can be run on the fly from the command line to test something out.
+To my mind, the setup code can then be written in the main function to no real cost compared to having it done in the <code>time_it</code> function.
+That being said, I believe it would be possible to accept a setup function by making the input of <code>time_it</code> two tuples of function and arguments, the first being the function to test and the second being the setup function.
+I am just not 100% certain that it would be useful and I cannot say for sure that it can be done because I have not tried implementing it.
+In my opinion, it would make calling the function without setup code much uglier.
+Maybe an overload taking two tuples and the current version could live together and that would allow the functionality at &quot;no cost&quot;.</p>
+<p>Anyhow, those are my thoughts on the matter for now.</p>
+<h3 id="Notes">Notes</h3>
+<p id="ftnt:1"><sup>[1]</sup>&nbsp;I chose the name with an underscore to differentiate the function from its Python counterpart since my version does not do <em>exactly</em> all the stuff the python version can!&nbsp;<a href="#ftntref:1">&#8617;&#65038;</a></p>
+
+    </article>
+  </main>
+
+
+  <footer>
+    <div class="footer_text">
+      <div>
+        <h3>Hi, <a href="https://ghlecl.github.io/about/">I'm Ghyslain</a></h3>
+        <p>
+          I am a medical physicist by day and a hobby programmer by night.
+          You can follow me on <a href="http://twitter.com/ghlecl" target="_blank">Twitter</a>
+          and on <a href="http://github.com/ghlecl" target="_blank">GitHub</a>.
+          You can reach me via codeattempts [at] gmail [dot] com.
+        </p>
+        </div>
+    </div>
+    <div class="footer_copyright">
+      &copy; 2022 <a href="https://ghlecl.github.io/about/">Ghyslain Leclerc</a>
+      &mdash; Made in Québec, Canada
+      &mdash; Generated using <a href="https://www.getzola.org/" target="_blank">Zola</a>
+      &mdash; Style ported from <a href="https://jnjosh.com/about/" target="_blank">Josh Johnson's</a>
+      Hugo Theme (<a href="https://github.com/jnjosh/internet-weblog"target="_blank">internet-weblog</a>)
+    </div>
+  </footer>
+
+</body>
+
+</html>

@@ -1,108 +1,74 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-  xmlns:xhtml="http://www.w3.org/1999/xhtml">
-  
-  <url>
-    <loc>https://ghlecl.github.io/microposts/string_ctor/</loc>
-    <lastmod>2018-09-18T21:45:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/posts/cpp_invoke/</loc>
-    <lastmod>2018-09-13T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/posts/range_function/</loc>
-    <lastmod>2018-08-05T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/posts/usual_conversions/</loc>
-    <lastmod>2018-05-19T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/posts/integer_representations/</loc>
-    <lastmod>2018-04-30T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/microposts/friends_only_class/</loc>
-    <lastmod>2017-11-28T13:30:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/microposts/count_chars_in_n_first_lines/</loc>
-    <lastmod>2017-11-22T12:30:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/posts/return_type_overload/</loc>
-    <lastmod>2017-10-12T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/posts/learning_rvalues/</loc>
-    <lastmod>2017-01-10T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/posts/hugo_theme/</loc>
-    <lastmod>2017-01-05T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/posts/cxx_time_it/</loc>
-    <lastmod>2016-03-20T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/posts/hugo/</loc>
-    <lastmod>2016-02-14T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/posts/static_site/</loc>
-    <lastmod>2015-12-29T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/posts/github_pages/</loc>
-    <lastmod>2015-11-23T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/about/</loc>
-    <lastmod>2015-11-09T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/categories/</loc>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/</loc>
-    <lastmod>2018-09-18T21:45:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/microposts/</loc>
-    <lastmod>2018-09-18T21:45:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/posts/</loc>
-    <lastmod>2018-09-13T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://ghlecl.github.io/tags/</loc>
-    <priority>0</priority>
-  </url>
-  
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://ghlecl.github.io/</loc>
+    </url>
+    <url>
+        <loc>https://ghlecl.github.io/about/</loc>
+        <lastmod>2015-09-01T00:00:00</lastmod>
+    </url>
+    <url>
+        <loc>https://ghlecl.github.io/posts/</loc>
+    </url>
+    <url>
+        <loc>https://ghlecl.github.io/posts/1/</loc>
+    </url>
+    <url>
+        <loc>https://ghlecl.github.io/posts/2/</loc>
+    </url>
+    <url>
+        <loc>https://ghlecl.github.io/posts/3/</loc>
+    </url>
+    <url>
+        <loc>https://ghlecl.github.io/posts/conveting_to_zola/</loc>
+        <lastmod>2022-04-22T22:30:00</lastmod>
+    </url>
+    <url>
+        <loc>https://ghlecl.github.io/posts/count_chars_in_n_first_lines/</loc>
+        <lastmod>2017-11-22T12:30:00</lastmod>
+    </url>
+    <url>
+        <loc>https://ghlecl.github.io/posts/cpp_invoke/</loc>
+        <lastmod>2018-09-13T19:15:00</lastmod>
+    </url>
+    <url>
+        <loc>https://ghlecl.github.io/posts/cpp_time_it/</loc>
+        <lastmod>2016-03-20T19:43:00</lastmod>
+    </url>
+    <url>
+        <loc>https://ghlecl.github.io/posts/friends_only_class/</loc>
+        <lastmod>2017-11-28T13:30:00</lastmod>
+    </url>
+    <url>
+        <loc>https://ghlecl.github.io/posts/github_pages/</loc>
+        <lastmod>2015-11-23T21:05:00</lastmod>
+    </url>
+    <url>
+        <loc>https://ghlecl.github.io/posts/integer_representations/</loc>
+        <lastmod>2018-04-30</lastmod>
+    </url>
+    <url>
+        <loc>https://ghlecl.github.io/posts/range_function/</loc>
+        <lastmod>2018-08-05</lastmod>
+    </url>
+    <url>
+        <loc>https://ghlecl.github.io/posts/return_type_overload/</loc>
+        <lastmod>2017-10-12</lastmod>
+    </url>
+    <url>
+        <loc>https://ghlecl.github.io/posts/rvalue_references_in_cxx/</loc>
+        <lastmod>2017-01-10T22:30:00</lastmod>
+    </url>
+    <url>
+        <loc>https://ghlecl.github.io/posts/static_site/</loc>
+        <lastmod>2015-12-29T17:32:00</lastmod>
+    </url>
+    <url>
+        <loc>https://ghlecl.github.io/posts/string_ctor/</loc>
+        <lastmod>2018-09-18T21:45:00</lastmod>
+    </url>
+    <url>
+        <loc>https://ghlecl.github.io/posts/usual_conversions/</loc>
+        <lastmod>2018-05-19</lastmod>
+    </url>
 </urlset>

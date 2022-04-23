@@ -1,315 +1,164 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="author" content="Ghyslain Leclerc">
-    <meta name="description" content="Personnal notes on code.">
-    <meta name="generator" content="Hugo 0.48" />
+<html lang="en">
 
-    
-    <title>@ghlecl’s Code Attempts</title>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Ghyslain Leclerc">
+  <meta name="description" content="Personnal notes on code">
+  <link rel="alternate" type="application/atom+xml" title="RSS" href="https://ghlecl.github.io/atom.xml">
+  <link rel="stylesheet" href="https://ghlecl.github.io/css/weblog.css" media="screen" charset="utf-8" />
+  <title> Code Attempts &middot; ghlecl's code attempts</title>
+</head>
 
-    <link rel="stylesheet" href="https://ghlecl.github.io/css/weblog.css" media="screen" charset="utf-8" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/1.2.14/css/lightgallery.min.css" type="text/css" />
-    
-<link rel="stylesheet" href="https://ghlecl.github.io/css/prism.css">
-
-
-    
-	<link href="https://ghlecl.github.io/index.xml" rel="alternate" type="application/rss+xml" title="Code Attempts" />
-	
-  </head>
-  <body class="site">
-
-<header>
-  <nav>
-    <h1><a href="https://ghlecl.github.io/">@ghlecl</a>’s Code Attempts.</h1>
-    <div class="menu">
-      
-      <ul>
-        
-            <li>
-              <a href="https://ghlecl.github.io/posts/">Posts</a>
-              
-                <a href="https://ghlecl.github.io/posts/index.xml"><img src="https://ghlecl.github.io/img/rss.svg" class="rss-icon" /></a>
-              
-            </li>
-        
-            <li>
-              <a href="https://ghlecl.github.io/microposts/">Microposts</a>
-              
-                <a href="https://ghlecl.github.io/microposts/index.xml"><img src="https://ghlecl.github.io/img/rss.svg" class="rss-icon" /></a>
-              
-            </li>
-        
-        <li><a href="https://ghlecl.github.io/about">About</a></li>
-      </ul>
-    </div>
-  </nav>
-</header>
-
-
+<body class="site">
+  <header>
+    <nav>
+      <h1><a href="/">@ghlecl</a>'s Code Attempts.</h1>
+      <div class="menu">
+        <ul>
+          <li>
+            <a href="https://ghlecl.github.io/posts/">Posts<img src="/img/atom.svg" class="rss-icon" /></a>
+          </li>
+          <li><a href="https://ghlecl.github.io/about/">About</a></li>
+        </ul>
+      </div>
+    </nav>
+  </header>
+  
   <main class="content list">
     
-
-  
-
-  
-    <article class="micropost">
-  
-
-<h1 id="std-string-from-c-style-string-ctor">std::string from C style string ctor</h1>
-
-<p>In writing a function template having to create a <code>std::string</code> from a <code>char[]</code>,
-I have had to use the following constructor of <code>std::string</code>:</p>
-
-<pre><code class="language-c++">basic_string( CharT const* s, size_type count, Allocator const&amp; alloc = Allocator() );
-</code></pre>
-
-<p>which you can find documentation for in the standard or on <a href="https://en.cppreference.com/w/cpp/string/basic_string/basic_string" target="_blank">cppreference.com</a>.  In using
-this constructor, I have had a &ldquo;off by one&rdquo; problem with the <code>count</code> parameter.
-The function template I originally wrote used the constructor like this:</p>
-
-<pre><code class="language-c++">template&lt; std::size_t N &gt;
-std::string foo( char const ( &amp;char_arr )[N] ) {
-   return std::string( char_arr, N );  // WRONG, do not do this
-}
-</code></pre>
-
-<p>which is a mistake.  The terminating <code>'\0'</code> character will be included in the
-value of <code>N</code> and will thus be part of the <code>std::string</code> (which <em>can</em> contain
-nulls).  Thus, the size of the new <code>std::string</code> will be one more then expected:</p>
-
-<pre><code class="language-c++">char const arr[] = &quot;string&quot;;
-auto bar = foo( arr );
-assert( bar.length() != 6 );
-assert( bar.length() == 7 );
-</code></pre>
-
-<p>Usually, when one is certain that the C style string is null terminated, the
-recommended way to use the constructor is:</p>
-
-<pre><code class="language-c++">std::string the_strg( char_arr, std::strlen( char_arr ) );
-</code></pre>
-
-<p>Since <code>std::strlen</code> will not include the null terminator in the length returned.
-To mimic this behavior, my template had to be written as:</p>
-
-<pre><code class="language-c++">template&lt; std::size_t N &gt;
-std::string foo( char const ( &amp;char_arr )[N] ) {
-   return std::string( char_arr, N - 1 );
-}
-</code></pre>
-
-<p>which will eliminate the need to calculate the length at runtime and yield the
-correct <code>std::string</code> with the expected length.  This is not exactly a hard
-problem, but it bit me and I want to remember this little detail!</p>
-
-<hr />
-
-<p>Edit (2018-09-19):
-<a href="https://twitter.com/PatriceRoy1" target="_blank">Patrice Roy</a> pointed out that my return
-statement in the first function was awkward (copy pasting and modifying to make
-an example is not ideal) and the second version was not returning anything.
-Fixed now.  Thanks Patrice for pointing it out.</p>
-
-  <a href='https://ghlecl.github.io/microposts/string_ctor/'><aside class="dates">→ 2018/09/18 9:45 PM</aside></a>
-</article>
-
-  
-
-  
-
-  
-
-
-  
-
-  
-
-  
-
-  
     <article class="post">
-  
-    <h2><a rel="full-article" href="https://ghlecl.github.io/posts/cpp_invoke/">Invoking a callable in C&#43;&#43;</a></h2>
-  
+      <h2>
+        <a rel="full-article" href="https://ghlecl.github.io/posts/conveting_to_zola/">Converting to Zola</a>
+      </h2>
+      <div class="postmeta">
+        Posted on <time datetime="2022-04-22 22:30" pubdate="">April 22, 2022</time>
+      </div>
+      <p>
+        
+   Zola
+I haven't had (or taken really) the time to write anything technical in the last few years.
+The pandemic definitely did have an impact on me, but also work.
+I was not in a frame of mind to program at home, much less write about it.
+But lately, I've felt better and I am getting back into that hobby of mine.
+In the interim, the static site generator that I was using (Hugo) upgraded quite a few
+      </p>
+      <a class="continue" rel="full-article" href="https://ghlecl.github.io/posts/conveting_to_zola/">Continue Reading »</a>
+    </article>
+    
+    <article class="post">
+      <h2>
+        <a rel="full-article" href="https://ghlecl.github.io/posts/string_ctor/">One of std::string ctor</a>
+      </h2>
+      <div class="postmeta">
+        Posted on <time datetime="2018-09-18 21:45" pubdate="">September 18, 2018</time>
+      </div>
+      <p>
+        
+   std::string from C style string ctor
+In writing a function template having to create a std::string from a char[], I have had to use the following constructor of std::string:
+basic_string( CharT const* s, size_type count, Allocator const&amp; alloc = Allocator() );
 
-  <div class="postmeta">Posted on <time datetime="2018-09-13 00:00:00 &#43;0000 UTC" pubdate="">September 13, 2018</time>
+which you can find documentation for in the standard or on cppreference.com.
+In using this constructor, I have had a &quot;off by one&quot; problem with the count parameter.
+The function template I originally wrote used the constructor
+      </p>
+      <a class="continue" rel="full-article" href="https://ghlecl.github.io/posts/string_ctor/">Continue Reading »</a>
+    </article>
     
-  </div>
-
-  <p>
-    
-      Invoking a callable in C++ This is my exploration of the std::invoke utility of C++17. I started with something vaguely related (which I am discussing here) and ended up reading the standard library implementation of std::invoke (and that of Google&rsquo;s Abseil library). The funny thing is that in the end, I decided I did not really need any of it for my original motivation, but I did gain some knowledge along the way, so worth the time!
-    
-  </p>
-
-  
-    
+    <article class="post">
+      <h2>
+        <a rel="full-article" href="https://ghlecl.github.io/posts/cpp_invoke/">Invoking a callable in C++</a>
+      </h2>
+      <div class="postmeta">
+        Posted on <time datetime="2018-09-13 19:15" pubdate="">September 13, 2018</time>
+      </div>
+      <p>
+        
+   Invoking a callable in C++
+This is my exploration of the std::invoke utility of C++17.
+I started with something vaguely related (which I am discussing here) and ended up reading the standard library implementation of std::invoke (and that of Google's Abseil library).
+The funny thing is that in the end, I decided I did not really need any of it for my original motivation, but I did gain some knowledge along the way, so worth the
+      </p>
       <a class="continue" rel="full-article" href="https://ghlecl.github.io/posts/cpp_invoke/">Continue Reading »</a>
+    </article>
     
-  
-</article>
-
-  
-
-
-  
-
-  
-
-  
-
-  
     <article class="post">
-  
-    <h2><a rel="full-article" href="https://ghlecl.github.io/posts/range_function/">Python&#39;s range in C&#43;&#43;</a></h2>
-  
-
-  <div class="postmeta">Posted on <time datetime="2018-08-05 00:00:00 &#43;0000 UTC" pubdate="">August 5, 2018</time>
-    
-  </div>
-
-  <p>
-    
-      Exploring loops: Python&rsquo;s range in C++ In spite of what Sean Parent would like (i.e. no raw loops ;-) ), loops are a common control flow in programming. So common that most languages have more than one loop syntax: for loop, while loop, do while loop&hellip; Given their prevalence, loops might seem uninteresting, but when I decided to look into creating a range function[1] for C++ which would behave like Python&rsquo;s range object, I learned a thing or two and decided to write them down.
-    
-  </p>
-
-  
-    
+      <h2>
+        <a rel="full-article" href="https://ghlecl.github.io/posts/range_function/">Python&#x27;s range in C++</a>
+      </h2>
+      <div class="postmeta">
+        Posted on <time datetime="2018-08-05 00:00" pubdate="">August 05, 2018</time>
+      </div>
+      <p>
+        
+   Exploring loops: Python's range in C++
+In spite of what Sean Parent would like (i.e. no raw loops ;-) ), loops are a common control flow in programming.
+So common that most languages have more than one loop syntax:
+for loop,
+while loop,
+do while loop...
+Given their prevalence, loops might seem uninteresting, but when I decided to look into
+creating a range function1 for C++ which would behave like Python's
+range object, I learned a thing or two and decided
+      </p>
       <a class="continue" rel="full-article" href="https://ghlecl.github.io/posts/range_function/">Continue Reading »</a>
+    </article>
     
-  
-</article>
-
-  
-
-
-  
-
-  
-
-  
-
-  
     <article class="post">
-  
-    <h2><a rel="full-article" href="https://ghlecl.github.io/posts/usual_conversions/">Mixed types arithmetic in C&#43;&#43;</a></h2>
-  
-
-  <div class="postmeta">Posted on <time datetime="2018-05-19 00:00:00 &#43;0000 UTC" pubdate="">May 19, 2018</time>
-    
-  </div>
-
-  <p>
-    
-      Arithmetic on mixed fundamental types in C++ For a weekend project of mine, I have had to think about mixed type arithmetic on fundamental types in C++. In the process, I made sense of a few fundamental things (no pun intended ;-)&nbsp;) and I have decided to write them down. Hopefully, writing about it will allow me to both clarify my thoughts and remember the information!
-Arithmetic conversions Applying binary operators to different types might seem trivial in C++, because it mostly just works.
-    
-  </p>
-
-  
-    
+      <h2>
+        <a rel="full-article" href="https://ghlecl.github.io/posts/usual_conversions/">Mixed types arithmetic in C++</a>
+      </h2>
+      <div class="postmeta">
+        Posted on <time datetime="2018-05-19 00:00" pubdate="">May 19, 2018</time>
+      </div>
+      <p>
+        
+   Arithmetic on mixed fundamental types in C++
+For a weekend project of mine, I have had to think about mixed type arithmetic on fundamental types in C++.
+In the process, I made sense of a few fundamental things (no pun intended ;-) ) and I have decided to write them down.
+Hopefully, writing about it will allow me to both clarify my thoughts and remember the information!
+Arithmetic conversions
+Applying binary operators to different types might seem trivial in
+      </p>
       <a class="continue" rel="full-article" href="https://ghlecl.github.io/posts/usual_conversions/">Continue Reading »</a>
+    </article>
     
-  
-</article>
-
-  
-
-
+  <div class="pagination">
   
 
   
 
   
-
+    <a href="https:&#x2F;&#x2F;ghlecl.github.io&#x2F;posts&#x2F;2&#x2F;">Older »</a>
   
-    <article class="post">
-  
-    <h2><a rel="full-article" href="https://ghlecl.github.io/posts/integer_representations/">Integer binary representations</a></h2>
-  
-
-  <div class="postmeta">Posted on <time datetime="2018-04-30 00:00:00 &#43;0000 UTC" pubdate="">April 30, 2018</time>
-    
   </div>
-
-  <p>
-    
-      Integer binary representations I had never had to look closely at integer binary representations in computers. The mental model I had for them was not wrong, but it turns out it was sub-optimal and there are better ways to do things. If you use high level abstractions and do not mainly work with fundamental types, or if you do not convert between integer types, you do not have to be mindful of the binary representation of integers all the time as you program.
-    
-  </p>
-
-  
-    
-      <a class="continue" rel="full-article" href="https://ghlecl.github.io/posts/integer_representations/">Continue Reading »</a>
-    
-  
-</article>
-
-  
-
-
-
-<div class="pagination">
-  
-
-  
-
-  
-    <a href="https://ghlecl.github.io/page/2/">Older »</a>
-  
-</div>
-
-
   </main>
 
-<footer>
-  <div class="footer_text">
+
+  <footer>
+    <div class="footer_text">
       <div>
-        <h3>Hi, <a href="https://ghlecl.github.io/about">I'm Ghyslain</a></h3>
+        <h3>Hi, <a href="https://ghlecl.github.io/about/">I'm Ghyslain</a></h3>
         <p>
           I am a medical physicist by day and a hobby programmer by night.
-
-
-You can follow me on <a href="http://twitter.com/ghlecl" target="_blank">Twitter</a> and on <a href="http://github.com/ghlecl" target="_blank">GitHub</a>.  You can reach me via codeattempts [at] gmail [dot] com.
-
+          You can follow me on <a href="http://twitter.com/ghlecl" target="_blank">Twitter</a>
+          and on <a href="http://github.com/ghlecl" target="_blank">GitHub</a>.
+          You can reach me via codeattempts [at] gmail [dot] com.
         </p>
-      </div>
-      
-  </div>
-
-  
-    <div class="footer_copyright">
-      &copy; 2018 <a href="https://ghlecl.github.io/about">Ghyslain Leclerc</a>
-       - Made in Québec, Canada
+        </div>
     </div>
-  
-</footer>
+    <div class="footer_copyright">
+      &copy; 2022 <a href="https://ghlecl.github.io/about/">Ghyslain Leclerc</a>
+      &mdash; Made in Québec, Canada
+      &mdash; Generated using <a href="https://www.getzola.org/" target="_blank">Zola</a>
+      &mdash; Style ported from <a href="https://jnjosh.com/about/" target="_blank">Josh Johnson's</a>
+      Hugo Theme (<a href="https://github.com/jnjosh/internet-weblog"target="_blank">internet-weblog</a>)
+    </div>
+  </footer>
 
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/2.2.0/jquery.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/1.2.14/js/lightgallery-all.min.js" charset="utf-8"></script>
-    <script src="https://ghlecl.github.io/js/weblog.js" charset="utf-8"></script>
-    
-<script src="https://ghlecl.github.io/js/prism.js"></script>
+</body>
 
-    <script type="text/javascript">
-
-  
-  $(function() {
-    
-    $.getJSON("https://api.flickr.com/services/feeds/photos_public.gne?id=&format=json&jsoncallback=?", function(data) {
-      iweblog.application.displayImages(data, 8);
-    });
-  });
-
-</script>
-
-    
-  </body>
 </html>
-

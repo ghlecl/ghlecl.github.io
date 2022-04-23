@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Ghyslain Leclerc">
+  <meta name="description" content="Personnal notes on code">
+  <link rel="alternate" type="application/atom+xml" title="RSS" href="https://ghlecl.github.io/atom.xml">
+  <link rel="stylesheet" href="https://ghlecl.github.io/css/weblog.css" media="screen" charset="utf-8" />
+  <title>Converting to Zola &middot; ghlecl's code attempts</title>
+</head>
+
+<body class="site">
+  <header>
+    <nav>
+      <h1><a href="/">@ghlecl</a>'s Code Attempts.</h1>
+      <div class="menu">
+        <ul>
+          <li>
+            <a href="https://ghlecl.github.io/posts/">Posts<img src="/img/atom.svg" class="rss-icon" /></a>
+          </li>
+          <li><a href="https://ghlecl.github.io/about/">About</a></li>
+        </ul>
+      </div>
+    </nav>
+  </header>
+  
+  <main class="content">
+    <article class="post">
+      <h1 class="title">Converting to Zola</h1>
+      <div class="postmeta">
+        Posted on <time datetime="2022-04-22 22:30" pubdate="">2022-04-22</time>
+      </div>
+      <h1 id="Zola">Zola</h1>
+<p>I haven't had (or taken really) the time to write anything technical in the last few years.
+The pandemic definitely did have an impact on me, but also work.
+I was not in a frame of mind to program at home, much less write about it.
+But lately, I've felt better and I am getting back into that hobby of mine.</p>
+<p>In the interim, the static site generator that I was using (Hugo) upgraded quite a few times, so much so that a bunch of warnings/errors came up when I tried it again to update my site.
+This was a reminder that I don't actually understand fully the tool I'm using and that I could probably understand better.
+Given that I would had to change things anyhow, I allowed myself to look at alternatives and came up on <a href="https://www.getzola.org/">Zola</a>.
+One thing that I did not like much about Hugo was the templates.
+It is based on the Go templating language.
+Zola is based on the <a href="https://tera.netlify.app/">Tera</a> templating engine which itself is based on the popular <a href="https://jinja.palletsprojects.com/en/3.1.x/">Jinja</a>, which I find more intuitive.
+So I decided to try and switch.</p>
+<p>One thing I did not want to change was the layout of the site.
+I quite like the style of the Hugo theme I was using: <a href="https://github.com/jnjosh/internet-weblog">Internet-Weblog</a>.
+So I set out to replicate it, mostly, but did change a few things.</p>
+<p>First, I abandoned microposts, since I realized I have short posts, but nothing micro.
+I did not use some of the features of the theme, so I did not put them in and kept the basic minimum.</p>
+<p>Then, I have changed the RSS feed for an Atom feed.  Hoping this will not be too problematic.
+I probably had one, maybe two subscribers, so I doubt it will affect that many people.</p>
+<p>I also added a link footnote system so that the footnotes are clickable and there is a back link after the note to get back to the text.</p>
+<p>I also changed the colors of the code samples and the highlighting.  I use a tomorrow night like color scheme (which, incidentally, I like to use in my editors as well).</p>
+<p>One thing I couldn't achieve is the exact same pagination.
+This is a technical limitation of Zola.
+It might change in the next versions, but for now, the about page is now considered a &quot;post&quot; just like the rest of the posts.
+If the limitation in Zola is lifted, I'll remove it.
+For now, I've artificially set the date of the about page to be before any other post, so that it is at the end of the pagination.</p>
+<p>Other than those, I don't think there is much change.  Still, thought I would mark the change by this short post to remember when it happened.</p>
+
+    </article>
+  </main>
+
+
+  <footer>
+    <div class="footer_text">
+      <div>
+        <h3>Hi, <a href="https://ghlecl.github.io/about/">I'm Ghyslain</a></h3>
+        <p>
+          I am a medical physicist by day and a hobby programmer by night.
+          You can follow me on <a href="http://twitter.com/ghlecl" target="_blank">Twitter</a>
+          and on <a href="http://github.com/ghlecl" target="_blank">GitHub</a>.
+          You can reach me via codeattempts [at] gmail [dot] com.
+        </p>
+        </div>
+    </div>
+    <div class="footer_copyright">
+      &copy; 2022 <a href="https://ghlecl.github.io/about/">Ghyslain Leclerc</a>
+      &mdash; Made in Québec, Canada
+      &mdash; Generated using <a href="https://www.getzola.org/" target="_blank">Zola</a>
+      &mdash; Style ported from <a href="https://jnjosh.com/about/" target="_blank">Josh Johnson's</a>
+      Hugo Theme (<a href="https://github.com/jnjosh/internet-weblog"target="_blank">internet-weblog</a>)
+    </div>
+  </footer>
+
+</body>
+
+</html>

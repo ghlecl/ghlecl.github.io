@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ghlecl.github.io/sitemap.xml

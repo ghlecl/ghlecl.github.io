@@ -1,268 +1,138 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="author" content="Ghyslain Leclerc">
-    <meta name="description" content="Personnal notes on code.">
-    <meta name="generator" content="Hugo 0.48" />
+<html lang="en">
 
-    
-    <title>Mixed types arithmetic in C&#43;&#43; &middot; @ghlecl’s Code Attempts</title>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Ghyslain Leclerc">
+  <meta name="description" content="Personnal notes on code">
+  <link rel="alternate" type="application/atom+xml" title="RSS" href="https://ghlecl.github.io/atom.xml">
+  <link rel="stylesheet" href="https://ghlecl.github.io/css/weblog.css" media="screen" charset="utf-8" />
+  <title>Mixed types arithmetic in C++ &middot; ghlecl's code attempts</title>
+</head>
 
-    <link rel="stylesheet" href="https://ghlecl.github.io/css/weblog.css" media="screen" charset="utf-8" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/1.2.14/css/lightgallery.min.css" type="text/css" />
-    
-<link rel="stylesheet" href="https://ghlecl.github.io/css/prism.css">
-
-
-    
-	<link href="https://ghlecl.github.io/index.xml" rel="alternate" type="application/rss+xml" title="Code Attempts" />
-	
-  </head>
-  <body class="site">
-
-<header>
-  <nav>
-    <h1><a href="https://ghlecl.github.io/">@ghlecl</a>’s Code Attempts.</h1>
-    <div class="menu">
-      
-      <ul>
-        
-            <li>
-              <a href="https://ghlecl.github.io/posts/">Posts</a>
-              
-                <a href="https://ghlecl.github.io/posts/index.xml"><img src="https://ghlecl.github.io/img/rss.svg" class="rss-icon" /></a>
-              
-            </li>
-        
-            <li>
-              <a href="https://ghlecl.github.io/microposts/">Microposts</a>
-              
-                <a href="https://ghlecl.github.io/microposts/index.xml"><img src="https://ghlecl.github.io/img/rss.svg" class="rss-icon" /></a>
-              
-            </li>
-        
-        <li><a href="https://ghlecl.github.io/about">About</a></li>
-      </ul>
-    </div>
-  </nav>
-</header>
-
-
-  <main class="content">
-
-    <article class="post">
-      
-        <h2><a rel="full-article" href="https://ghlecl.github.io/posts/usual_conversions/">Mixed types arithmetic in C&#43;&#43;</a></h2>
-      
-
-      <div class="postmeta">Posted on <time datetime="2018-05-19 00:00:00 &#43;0000 UTC" pubdate="">May 19, 2018</time> in
-        <span class="categories">
-          
-        </span>
+<body class="site">
+  <header>
+    <nav>
+      <h1><a href="/">@ghlecl</a>'s Code Attempts.</h1>
+      <div class="menu">
+        <ul>
+          <li>
+            <a href="https://ghlecl.github.io/posts/">Posts<img src="/img/atom.svg" class="rss-icon" /></a>
+          </li>
+          <li><a href="https://ghlecl.github.io/about/">About</a></li>
+        </ul>
       </div>
-
-      <p>
-        
-
-<h1 id="arithmetic-on-mixed-fundamental-types-in-c">Arithmetic on mixed fundamental types in C++</h1>
-
-<p>For a weekend project of mine, I have had to think about mixed type arithmetic
-on fundamental types in C++.  In the process, I made sense of a few fundamental
-things (no <em>pun</em> intended ;-)&nbsp;) and I have decided to write them down.
-Hopefully, writing about it will allow me to both clarify my thoughts and
-remember the information!</p>
-
-<h2 id="arithmetic-conversions">Arithmetic conversions</h2>
-
-<p>Applying binary operators to different types might seem trivial in C++, because
-it mostly just works.  If you write the following code:</p>
-
-<pre><code class="language-c++">float flt{15.f};
-long lng_a{30L};
-long lng_b = lng_a + flt;
-assert( lng_b == 45 );
-</code></pre>
-
-<p>and then run it, the value of <code>lng_b</code> will be 45.  No surprises&hellip;  Except
-when you stop to think about what happened in the background and how many rules
-were involved in the computation.<sup>[1]</sup></p>
-
-<p>Naively (as seems to often be the case for me&hellip;), because of the performance
-reputation of C++, I assumed that the addition expression above mapped to an
-assembly language instruction<sup>[2]</sup> to add two registers.  Then, I
-started thinking more seriously about the problem, and even though I am anything
-but an expert in assembly, it brought me to this question: is there an opcode to
-add an <code>int</code> to a <code>float</code>?  Are there mixed type instructions for the CPUs?  With
-modern hardware, <a href="https://queue.acm.org/detail.cfm?id=3212479" target="_blank">it is not as simple as we think anymore</a>, but as far as I could find out, in
-most hardware, <a href="https://stackoverflow.com/a/42184775" target="_blank">there</a>
-<a href="https://stackoverflow.com/a/28011249" target="_blank">is not</a>.  This means that at the hardware
-level, both datum have to have the same representation to allow the operation,
-which is not completely unreasonable.  Thus, even for the simple expression in
-the code above, conversions are needed to select a common type to apply the
-operation on.</p>
-
-<p>The C++ language standard explicitly states which conversions will take place
-(inherited from&nbsp;C) allowing one to take control and override the behavior
-manually using a cast if preferred. This could be needed if, for instance, the
-default conversion introduces loss of precision on a given platform or if a
-specific wrapping behavior is required.</p>
-
-<p>One should note that the type selected for the operation by the conversion rules
-will be the type of both operands <strong><em>and</em></strong> of the return value.  This means that
-a supplementary conversion might happen if the type in which the result of the
-operation is put is not that which would have been selected by the usual
-conversions (as is the case in the example above).  Something to keep in mind.</p>
-
-<h2 id="usual-arithmetic-conversions">Usual arithmetic conversions</h2>
-
-<p>The conversion rules applied before binary operations on fundamental types are
-called the <em>usual arithmetic conversions</em> and can be found in
-section&nbsp;<strong>8&nbsp;Expressions</strong> of the C++ standard document<sup>[3]</sup>.
-For those like me who do not easily read &ldquo;standardese&rdquo;, information on the
-subject with some explanations can be
-<a href="https://docs.microsoft.com/en-us/cpp/cpp/standard-conversions" target="_blank">found</a>
-<a href="https://wiki.sei.cmu.edu/confluence/display/c/INT02-C.+Understand+integer+conversion+rules" target="_blank">in</a>
-<a href="http://en.cppreference.com/w/cpp/language/implicit_conversion" target="_blank">other</a>
-<a href="https://www.ibm.com/support/knowledgecenter/en/SSQ2R2_9.0.0/com.ibm.tpf
-.toolkit.compilers.doc/ref/langref_os390/cbclr21011.htm" target="_blank">places</a>.  That said,
-I have had to read some of the standard&rsquo;s sections relating to the topic and I
-have found them not too hard to read.  Might be a sign that I am slowly getting
-assimilated&hellip;</p>
-
-<p>In the discussion that follows, I will consider an operation <code>op</code> on two
-operands <code>t1</code> and <code>t2</code> respectively of types <code>T1</code> and <code>T2</code>.  This can be
-conceptually represented as:</p>
-
-<pre><code class="language-c++">T1 t1;
-T2 t2;
-t1 op t2;
-</code></pre>
-
+    </nav>
+  </header>
+  
+  <main class="content">
+    <article class="post">
+      <h1 class="title">Mixed types arithmetic in C++</h1>
+      <div class="postmeta">
+        Posted on <time datetime="2018-05-19 00:00" pubdate="">2018-05-19</time>
+      </div>
+      <h1 id="Arithmetic_on_mixed_fundamental_types_in_C++">Arithmetic on mixed fundamental types in C++</h1>
+<p>For a weekend project of mine, I have had to think about mixed type arithmetic on fundamental types in C++.
+In the process, I made sense of a few fundamental things (no <em>pun</em> intended ;-) ) and I have decided to write them down.
+Hopefully, writing about it will allow me to both clarify my thoughts and remember the information!</p>
+<h2 id="Arithmetic_conversions">Arithmetic conversions</h2>
+<p>Applying binary operators to different types might seem trivial in C++, because it mostly just works.
+If you write the following code:</p>
+<pre data-lang="c++" style="background-color:#1d1f21;color:#c5c8c6;" class="language-c++ "><code class="language-c++" data-lang="c++"><span style="color:#b294bb;">float </span><span style="color:#cc6666;">flt</span><span style="color:#81a2be;">{</span><span style="color:#de935f;">15.</span><span style="color:#b294bb;">f</span><span style="color:#81a2be;">}</span><span>;
+</span><span style="color:#b294bb;">long </span><span style="color:#cc6666;">lng_a</span><span style="color:#81a2be;">{</span><span style="color:#de935f;">30</span><span style="color:#b294bb;">L</span><span style="color:#81a2be;">}</span><span>;
+</span><span style="color:#b294bb;">long</span><span> lng_b </span><span style="color:#8abeb7;">=</span><span> lng_a </span><span style="color:#8abeb7;">+</span><span> flt;
+</span><span style="color:#cc6666;">assert</span><span style="color:#81a2be;">( lng_b </span><span style="color:#8abeb7;">== </span><span style="color:#de935f;">45 </span><span style="color:#81a2be;">)</span><span>;
+</span></code></pre>
+<p>and then run it, the value of <code>lng_b</code> will be 45.
+No surprises...
+Except when you stop to think about what happened in the background and how many rules were involved in the computation.<sup id="ftntref:1"><a href="#ftnt:1">1</a></sup></p>
+<p>Naively (as seems to often be the case for me...), because of the performance reputation of C++, I assumed that the addition expression above mapped to an assembly language instruction<sup id="ftntref:2"><a href="#ftnt:2">2</a></sup> to add two registers.
+Then, I started thinking more seriously about the problem, and even though I am anything but an expert in assembly, it brought me to this question: is there an opcode to add an <code>int</code> to a <code>float</code>?  Are there mixed type instructions for the CPUs?
+With modern hardware, <a href="https://queue.acm.org/detail.cfm?id=3212479">it is not as simple as we think anymore</a>, but as far as I could find out, in most hardware, <a href="https://stackoverflow.com/a/42184775">there</a> <a href="https://stackoverflow.com/a/28011249">is not</a>.
+This means that at the hardware level, both datum have to have the same representation to allow the operation, which is not completely unreasonable.
+Thus, even for the simple expression in the code above, conversions are needed to select a common type to apply the operation on.</p>
+<p>The C++ language standard explicitly states which conversions will take place (inherited from C) allowing one to take control and override the behavior manually using a cast if preferred.
+This could be needed if, for instance, the default conversion introduces loss of precision on a given platform or if a specific wrapping behavior is required.</p>
+<p>One should note that the type selected for the operation by the conversion rules will be the type of both operands <strong><em>and</em></strong> of the return value.
+This means that a supplementary conversion might happen if the type in which the result of the operation is put is not that which would have been selected by the usual conversions (as is the case in the example above).
+Something to keep in mind.</p>
+<h2 id="Usual_arithmetic_conversions">Usual arithmetic conversions</h2>
+<p>The conversion rules applied before binary operations on fundamental types are called the <em>usual arithmetic conversions</em> and can be found in section <strong>8 Expressions</strong> of the C++ standard document<sup id="ftntref:3"><a href="#ftnt:3">3</a></sup>.
+For those like me who do not easily read &quot;standardese&quot;, information on the subject with some explanations can be <a href="https://docs.microsoft.com/en-us/cpp/cpp/standard-conversions">found</a> <a href="https://wiki.sei.cmu.edu/confluence/display/c/INT02-C.+Understand+integer+conversion+rules">in</a> <a href="http://en.cppreference.com/w/cpp/language/implicit_conversion">other</a> <a href="https://www.ibm.com/support/knowledgecenter/en/SSQ2R2_9.0.0/com.ibm.tpf.toolkit.compilers.doc/ref/langref_os390/cbclr21011.htm">places</a>.
+That said, I have had to read some of the standard's sections relating to the topic and I have found them not too hard to read.
+Might be a sign that I am slowly getting assimilated...</p>
+<p>In the discussion that follows, I will consider an operation <code>op</code> on two operands <code>t1</code> and <code>t2</code> respectively of types <code>T1</code> and <code>T2</code>.
+This can be conceptually represented as:</p>
+<pre data-lang="c++" style="background-color:#1d1f21;color:#c5c8c6;" class="language-c++ "><code class="language-c++" data-lang="c++"><span>T1 t1;
+</span><span>T2 t2;
+</span><span>t1 op t2;
+</span></code></pre>
 <p>In the discussion, I will consider the following cases:</p>
-
 <ol>
-<li><code>T1</code> and <code>T2</code> are the same type (yes, conversions <em>can</em> happen&hellip;)</li>
+<li><code>T1</code> and <code>T2</code> are the same type (yes, conversions <em>can</em> happen...)</li>
 <li><code>T1</code> is floating point and <code>T2</code> is integral (or vice versa)</li>
 <li><code>T1</code> and <code>T2</code> are both floating point, but different types</li>
 <li><code>T1</code> and <code>T2</code> are both integral, but different types</li>
 </ol>
-
-<p>These are almost all the situations covered in paragraph&nbsp;11 of section&nbsp;8
-of the standard (but the last point is actually split in several sub-sections).
-The only case I am not considering is when one of the type (or both) is a scoped
-enumeration (i.e. an <code>enum class</code>), because that had nothing to do with my
-project and I simply did not think about it as much.</p>
-
-<h2 id="same-type">Same type</h2>
-
-<p>Even if the types are not actually mixed, I had to consider the case where both
-operands are of the same type, i.e., <code>T1 == T2</code>.  Intuitively, nothing should
-happen in this case, but it turns out that it is a false assumption.  Because
-arithmetic operators in C++ do not accept any type smaller than <code>int</code>,
-<a href="http://en.cppreference.com/w/cpp/language/implicit_conversion#
-Integral_promotion" target="_blank">integral promotion</a> will take place before the operation. This is described in
-section&nbsp;<strong>7.6&nbsp;Integral promotions</strong> of the standard and can be roughly
-summarized as: any type smaller than <code>int</code> will be converted to <code>int</code> or
-<code>unsigned int</code>.  For instance, the following relation holds:</p>
-
-<pre><code class="language-c++">short a{0};
-short b{1};
-static_assert( is_same_v&lt; int, decltype( a + b ) &gt; );
-</code></pre>
-
-<p>Other than that, nothing else happens in terms of conversions.  As the name
-suggests, this applies only for integral types.  I would assume that is because
-the smallest floating point type is at least as large as an <code>int</code>, but I don&rsquo;t
-think that is guaranteed.</p>
-
-<h2 id="mixed-integral-and-floating-point-types">Mixed integral and floating point types</h2>
-
-<p>Now, to look at mixed type arithmetic, the simplest case to start with is that
-of integral and floating point mixed operations, i.e. either <code>T1</code> or <code>T2</code> is a
-floating point and the other is integral.  In this case, the standard simply
-mandates that the integer value be converted to the floating point type:</p>
-
-<pre><code class="language-c++">int + float =&gt; (float)int + float
-unsigned long long - float =&gt; (float)unsigned long long - float
-long double + unsigned =&gt; long double + (long double)unsigned
-...
-</code></pre>
-
-<p>The casts illustrated here are at least what <em>conceptually happens</em> if not what
-<em>actually happens</em>, but, as far as I can tell, it is what actually happens.  The
-type selected in this situation is not too surprising when you think about it.
-At least for IEEE floating points, the range of the smallest floating point type
-(<code>float</code>: 3.4&times;10<sup>38</sup>) is much larger than that of the largest
-integer type (<code>unsigned long long</code>: 1.84&times;10<sup>19</sup>).  Thus, neglecting
-the issue of not being able to represent the value exactly if the mantissa of the
-floating point type cannot hold the value of the integer type, the floating point
-type will accommodate the integer type.  On top of that, the fractional part of
-the floating point would necessarily be lost (either by rounding, truncating or
-any other choice) if the conversion would be in the other direction.</p>
-
-<p>So again, because of those two points, the standard here makes sense (at least
-to me!).</p>
-
-<h2 id="mixed-floating-points">Mixed floating points</h2>
-
-<p>Next on the scale of simplicity is the case where both arguments are of a
-(different) floating point type.  In this case, the rule is simple: the smaller
-type is cast to the larger type before the operation.</p>
-
-<pre><code class="language-c++">double / float =&gt; double / (double)float
-long double + double =&gt; long double + (long double)double
-...
-</code></pre>
-
-<p>This makes sense.  The value in the smaller sized variable will fit in the
-larger one, so no change in value.</p>
-
-<h2 id="mixed-integrals">Mixed integrals</h2>
-
-<p>The final case is that of both operands being of integral types. Here, there are
-a few more things to consider, since for the same type size, there are signed
-and unsigned types (for instance, <code>int</code> and <code>unsigned int</code> must be the same size,
-e.g. 4&nbsp;bytes).  This complicates matters a little and before we continue, we need
-to first define the concept of integer conversion rank
-(section&nbsp;<strong>7.15&nbsp;Integer conversion rank</strong> of the
-standard document) which will be used in deciding the conversions to apply for
-mixed integer types arithmetic.  Once these ranks are defined, the first
-situation that applies in the following four scenarios is the conversion
-mandated by the standard:</p>
-
+<p>These are almost all the situations covered in paragraph 11 of section 8 of the standard (but the last point is actually split in several sub-sections).
+The only case I am not considering is when one of the type (or both) is a scoped enumeration (i.e. an <code>enum class</code>), because that had nothing to do with my project and I simply did not think about it as much.</p>
+<h2 id="Same_type">Same type</h2>
+<p>Even if the types are not actually mixed, I had to consider the case where both operands are of the same type, i.e., <code>T1 == T2</code>.
+Intuitively, nothing should happen in this case, but it turns out that it is a false assumption.
+Because arithmetic operators in C++ do not accept any type smaller than <code>int</code>, <a href="http://en.cppreference.com/w/cpp/language/implicit_conversion#Integral_promotion">integral promotion</a> will take place before the operation.
+This is described in section <strong>7.6 Integral promotions</strong> of the standard and can be roughly summarized as: any type smaller than <code>int</code> will be converted to <code>int</code> or <code>unsigned int</code>.
+For instance, the following relation holds:</p>
+<pre data-lang="c++" style="background-color:#1d1f21;color:#c5c8c6;" class="language-c++ "><code class="language-c++" data-lang="c++"><span style="color:#b294bb;">short </span><span style="color:#cc6666;">a</span><span style="color:#81a2be;">{</span><span style="color:#de935f;">0</span><span style="color:#81a2be;">}</span><span>;
+</span><span style="color:#b294bb;">short </span><span style="color:#cc6666;">b</span><span style="color:#81a2be;">{</span><span style="color:#de935f;">1</span><span style="color:#81a2be;">}</span><span>;
+</span><span style="color:#8abeb7;">static_assert</span><span>( is_same_v&lt; </span><span style="color:#b294bb;">int</span><span>, </span><span style="color:#b294bb;">decltype</span><span>( a </span><span style="color:#8abeb7;">+</span><span> b ) &gt; );
+</span></code></pre>
+<p>Other than that, nothing else happens in terms of conversions.
+As the name suggests, this applies only for integral types.
+I would assume that is because the smallest floating point type is at least as large as an <code>int</code>, but I don't think that is guaranteed.</p>
+<h2 id="Mixed_integral_and_floating_point_types">Mixed integral and floating point types</h2>
+<p>Now, to look at mixed type arithmetic, the simplest case to start with is that of integral and floating point mixed operations, i.e. either <code>T1</code> or <code>T2</code> is a floating point and the other is integral.
+In this case, the standard simply mandates that the integer value be converted to the floating point type:</p>
+<pre data-lang="c++" style="background-color:#1d1f21;color:#c5c8c6;" class="language-c++ "><code class="language-c++" data-lang="c++"><span style="color:#b294bb;">int </span><span style="color:#8abeb7;">+ </span><span style="color:#b294bb;">float </span><span style="color:#8abeb7;">=&gt; </span><span>(</span><span style="color:#b294bb;">float</span><span>)</span><span style="color:#b294bb;">int </span><span style="color:#8abeb7;">+ </span><span style="color:#b294bb;">float
+</span><span style="color:#b294bb;">unsigned long long </span><span style="color:#8abeb7;">- </span><span style="color:#b294bb;">float </span><span style="color:#8abeb7;">=&gt; </span><span>(</span><span style="color:#b294bb;">float</span><span>)</span><span style="color:#b294bb;">unsigned long long </span><span style="color:#8abeb7;">- </span><span style="color:#b294bb;">float
+</span><span style="color:#b294bb;">long double </span><span style="color:#8abeb7;">+ </span><span style="color:#b294bb;">unsigned </span><span style="color:#8abeb7;">=&gt; </span><span style="color:#b294bb;">long double </span><span style="color:#8abeb7;">+ </span><span>(</span><span style="color:#b294bb;">long double</span><span>)</span><span style="color:#b294bb;">unsigned
+</span><span style="color:#8abeb7;">...
+</span></code></pre>
+<p>The casts illustrated here are at least what <em>conceptually happens</em> if not what <em>actually happens</em>, but, as far as I can tell, it is what actually happens.
+The type selected in this situation is not too surprising when you think about it.
+At least for IEEE floating points, the range of the smallest floating point type (<code>float</code>: 3.4×10<sup>38</sup>) is much larger than that of the largest integer type (<code>unsigned long long</code>: 1.84×10<sup>19</sup>).
+Thus, neglecting the issue of not being able to represent the value exactly if the mantissa of the floating point type cannot hold the value of the integer type, the floating point type will accommodate the integer type.
+On top of that, the fractional part of the floating point would necessarily be lost (either by rounding, truncating or any other choice) if the conversion would be in the other direction.</p>
+<p>So again, because of those two points, the standard here makes sense (at least to me!).</p>
+<h2 id="Mixed_floating_points">Mixed floating points</h2>
+<p>Next on the scale of simplicity is the case where both arguments are of a (different) floating point type.
+In this case, the rule is simple: the smaller type is cast to the larger type before the operation.</p>
+<pre data-lang="c++" style="background-color:#1d1f21;color:#c5c8c6;" class="language-c++ "><code class="language-c++" data-lang="c++"><span style="color:#b294bb;">double </span><span style="color:#8abeb7;">/ </span><span style="color:#b294bb;">float </span><span style="color:#8abeb7;">=&gt; </span><span style="color:#b294bb;">double </span><span style="color:#8abeb7;">/ </span><span>(</span><span style="color:#b294bb;">double</span><span>)</span><span style="color:#b294bb;">float
+</span><span style="color:#b294bb;">long double </span><span style="color:#8abeb7;">+ </span><span style="color:#b294bb;">double </span><span style="color:#8abeb7;">=&gt; </span><span style="color:#b294bb;">long double </span><span style="color:#8abeb7;">+ </span><span>(</span><span style="color:#b294bb;">long double</span><span>)</span><span style="color:#b294bb;">double
+</span><span style="color:#8abeb7;">...
+</span></code></pre>
+<p>This makes sense.
+The value in the smaller sized variable will fit in the larger one, so no change in value.</p>
+<h2 id="Mixed_integrals">Mixed integrals</h2>
+<p>The final case is that of both operands being of integral types. Here, there are a few more things to consider, since for the same type size, there are signed and unsigned types (for instance, <code>int</code> and <code>unsigned int</code> must be the same size, e.g. 4 bytes).
+This complicates matters a little and before we continue, we need to first define the concept of integer conversion rank (section <strong>7.15 Integer conversion rank</strong> of the standard document) which will be used in deciding the conversions to apply for mixed integer types arithmetic.
+Once these ranks are defined, the first situation that applies in the following four scenarios is the conversion mandated by the standard:</p>
 <ol>
 <li>both have the same signedness, independent of ranks;</li>
 <li>rank( unsigned ) &gt;= rank( signed );</li>
 <li>rank( signed ) &gt; rank( unsigned ), unsigned in signed range;</li>
 <li>rank( signed ) &gt; rank( unsigned ), unsigned not in signed range;</li>
 </ol>
-
-<p>Note that the order of the rank that I have written in situations 3 and 4 are not
-mentioned in the standard, but the fact that situations 1 and 2 do not apply
-implies that the rank of the signed integer is strictly greater than that of the
-unsigned integer, so I wrote it explicitly.</p>
-
-<h3 id="integer-conversion-rank">Integer conversion rank</h3>
-
-<p>From what I understand from reading the standard, the integer types in C++ are
-not given explicit values, but the relative ordering of the ranks is specified.
-This can be <strong><em>loosely</em></strong> interpreted as: the integer ranks are in corresponding
-order of size where the larger integral types have a higher rank.  In
-particular, the standard says (section&nbsp;7.15, par.&nbsp;1.3):</p>
-
+<p>Note that the order of the rank that I have written in situations 3 and 4 are not mentioned in the standard, but the fact that situations 1 and 2 do not apply implies that the rank of the signed integer is strictly greater than that of the unsigned integer, so I wrote it explicitly.</p>
+<h3 id="Integer_conversion_rank">Integer conversion rank</h3>
+<p>From what I understand from reading the standard, the integer types in C++ are not given explicit values, but the relative ordering of the ranks is specified.
+This can be <strong><em>loosely</em></strong> interpreted as: the integer ranks are in corresponding order of size where the larger integral types have a higher rank.
+In particular, the standard says (section 7.15, par. 1.3):</p>
 <blockquote>
-<p>The rank of <code>long long int</code> shall be greater than the rank of <code>long int</code>, which
-shall be greater than the rank of <code>int</code>, which shall be greater than the rank
-of <code>short int</code>, which shall be greater than the rank of <code>signed char</code>.</p>
+<p>The rank of <code>long long int</code> shall be greater than the rank of <code>long int</code>, which shall be greater than the rank of <code>int</code>, which shall be greater than the rank of <code>short int</code>, which shall be greater than the rank of <code>signed char</code>.</p>
 </blockquote>
-
-<p>In order to remove any ambiguity, the standard adds quite a few details (there
-are&nbsp;10&nbsp;clauses to the section), but I believe that the following order of ranks,
-from smallest rank to highest rank, is mandated by the standard:</p>
-
+<p>In order to remove any ambiguity, the standard adds quite a few details (there are 10 clauses to the section), but I believe that the following order of ranks, from smallest rank to highest rank, is mandated by the standard:</p>
 <ol>
 <li><code>bool</code></li>
 <li><code>char</code>, <code>signed char</code>, <code>unsigned char</code></li>
@@ -271,242 +141,124 @@ from smallest rank to highest rank, is mandated by the standard:</p>
 <li><code>long</code>, <code>unsigned long</code></li>
 <li><code>long long</code>, <code>unsigned long long</code></li>
 </ol>
-
-<p>where for a given type size, signed and unsigned types share their rank.  I said
-the rule of thumb as presented above loosely interprets the standard because the
-standard does not explicitly mandate the size of <code>short</code>, <code>int</code>, <code>long</code>, and
-others.  This freedom is to allow the implementers to represent the various
-hardware architectures that exist.  I think this is mostly an artifact of history,
-since a lot of modern hardware is 32&nbsp;or 64&nbsp;bits, but it is still how
-the standard is written.  That said, it remains that on some machines, two types
-could share the same size, e.g. on a particular architecture, <code>sizeof(long)</code> could
-be the same as <code>sizeof(int)</code>.  In such a case, the standard would still stipulate
-that those types&rsquo; ranks are different.  Specifically, in the example give, <code>long</code>
-would still have a higher rank than <code>int</code>.</p>
-
-<h3 id="same-signedness">Same signedness</h3>
-
-<p>So, getting back to the mixed operations and the usual conversion, in the case of
-two integral types with the same signedness, i.e. both <code>T1</code> and <code>T2</code> are signed
-or both of them are unsigned, the standard mandates that the integer with the
-smaller rank be converted (after promotion), to the integer with the higher rank.</p>
-
-<pre><code class="language-c++">long + int =&gt; long + (long) int
-unsigned short * unsigned int =&gt; (unsigned int)unsigned short * unsigned int
-...
-</code></pre>
-
-<p>The higher ranked integer will accommodate the values of the smaller ranked one
-without problem, and there are no considerations of sign, so no possible loss of
-value or overflow in the conversion (there is possible overflow in the <em>operation</em>,
-but not in the <em>conversion</em>).  This case is an easy one.</p>
-
-<h3 id="differing-signedness-unsigned-with-larger-or-equal-rank">Differing signedness, unsigned with larger or equal rank</h3>
-
-<p>In this case, the standard says that the signed integer will be converted to the
-unsigned type.</p>
-
-<pre><code class="language-c++">int + unsigned int =&gt; unsigned int(int) + unsigned int
-short - unsigned int =&gt; (unsigned int)short - unsigned int
-...
-</code></pre>
-
-<p>The fact that the operation then yields the correct answer is mandated by the
-standard.  In section&nbsp;<strong>7.8&nbsp;Integral conversions</strong>, the standard says:</p>
-
+<p>where for a given type size, signed and unsigned types share their rank.
+I said the rule of thumb as presented above loosely interprets the standard because the standard does not explicitly mandate the size of <code>short</code>, <code>int</code>, <code>long</code>, and others.
+This freedom is to allow the implementers to represent the various hardware architectures that exist.
+I think this is mostly an artifact of history, since a lot of modern hardware is 32 or 64 bits, but it is still how the standard is written.
+That said, it remains that on some machines, two types could share the same size, e.g. on a particular architecture, <code>sizeof(long)</code> could be the same as <code>sizeof(int)</code>.
+In such a case, the standard would still stipulate that those types' ranks are different.
+Specifically, in the example give, <code>long</code> would still have a higher rank than <code>int</code>.</p>
+<h3 id="Same_signedness">Same signedness</h3>
+<p>So, getting back to the mixed operations and the usual conversion, in the case of two integral types with the same signedness, i.e. both <code>T1</code> and <code>T2</code> are signed or both of them are unsigned, the standard mandates that the integer with the smaller rank be converted (after promotion), to the integer with the higher rank.</p>
+<pre data-lang="c++" style="background-color:#1d1f21;color:#c5c8c6;" class="language-c++ "><code class="language-c++" data-lang="c++"><span style="color:#b294bb;">long </span><span style="color:#8abeb7;">+ </span><span style="color:#b294bb;">int </span><span style="color:#8abeb7;">=&gt; </span><span style="color:#b294bb;">long </span><span style="color:#8abeb7;">+ </span><span>(</span><span style="color:#b294bb;">long</span><span>) </span><span style="color:#b294bb;">int
+</span><span style="color:#b294bb;">unsigned short </span><span style="color:#8abeb7;">* </span><span style="color:#b294bb;">unsigned int </span><span style="color:#8abeb7;">=&gt; </span><span>(</span><span style="color:#b294bb;">unsigned int</span><span>)</span><span style="color:#b294bb;">unsigned short </span><span style="color:#8abeb7;">* </span><span style="color:#b294bb;">unsigned int
+</span><span style="color:#8abeb7;">...
+</span></code></pre>
+<p>The higher ranked integer will accommodate the values of the smaller ranked one without problem, and there are no considerations of sign, so no possible loss of value or overflow in the conversion (there is possible overflow in the <em>operation</em>, but not in the <em>conversion</em>).
+This case is an easy one.</p>
+<h3 id="Differing_signedness,_unsigned_with_larger_or_equal_rank">Differing signedness, unsigned with larger or equal rank</h3>
+<p>In this case, the standard says that the signed integer will be converted to the unsigned type.</p>
+<pre data-lang="c++" style="background-color:#1d1f21;color:#c5c8c6;" class="language-c++ "><code class="language-c++" data-lang="c++"><span style="color:#b294bb;">int </span><span style="color:#8abeb7;">+ </span><span style="color:#b294bb;">unsigned int </span><span style="color:#8abeb7;">=&gt; </span><span>(</span><span style="color:#b294bb;">unsigned int</span><span>)</span><span style="color:#b294bb;">int </span><span style="color:#8abeb7;">+ </span><span style="color:#b294bb;">unsigned int
+</span><span style="color:#b294bb;">short </span><span style="color:#8abeb7;">- </span><span style="color:#b294bb;">unsigned int </span><span style="color:#8abeb7;">=&gt; </span><span>(</span><span style="color:#b294bb;">unsigned int</span><span>)</span><span style="color:#b294bb;">short </span><span style="color:#8abeb7;">- </span><span style="color:#b294bb;">unsigned int
+</span><span style="color:#8abeb7;">...
+</span></code></pre>
+<p>The fact that the operation then yields the correct answer is mandated by the standard.
+In section <strong>7.8 Integral conversions</strong>, the standard says:</p>
 <blockquote>
-<p>If the destination type is unsigned, the resulting value is the least unsigned
-integer congruent to the source integer (modulo&nbsp;2<sup><em>n</em></sup> where <em>n</em>
-is the number of bits used to represent the unsigned type). [ <em>Note</em>: In a
-two’s complement representation, this conversion is conceptual and there is no
-change in the bit pattern (if there is no truncation). &mdash; <em>end note</em>]</p>
+<p>If the destination type is unsigned, the resulting value is the least unsigned integer congruent to the source integer (modulo 2<sup><em>n</em></sup> where <em>n</em> is the number of bits used to represent the unsigned type).
+[ <em>Note</em>: In a two’s complement representation, this conversion is conceptual and there is no change in the bit pattern (if there is no truncation). — <em>end note</em>]</p>
 </blockquote>
-
-<p>Because of the modulo&nbsp;2<sup><em>n</em></sup> arithmetic, this will give the correct
-unsigned answer&hellip; most of the time.  See the discussion in the
-<a href="#keep-informed" target="_blank">last section</a> for an example where this rule yields
-a surprising result.</p>
-
-<p>This being the case, if you are putting the result of the operation in a variable,
-at this point, it is worth thinking about that variable&rsquo;s type, because if that
-type is not the type of the unsigned operand (or larger unsigned integral type),
-you will incur a conversion.  That is, while the operation is guaranteed to be
-correct by the standard, putting it back into anything but a large enough unsigned
-integral type might not yield the result you expect.  In a smaller unsigned
-integral type, there is at least another modulo conversion happening.  If the type
-is signed (whether it is large enough or not), then the result is implementation
-defined as stipulated by the standard, again in section&nbsp;7.8:</p>
-
+<p>Because of the modulo 2<sup><em>n</em></sup> arithmetic, this will give the correct unsigned answer... most of the time.
+See the discussion in the <a href="https://ghlecl.github.io/posts/usual_conversions/#Keep_informed">last section</a> for an example where this rule yields a surprising result.</p>
+<p>This being the case, if you are putting the result of the operation in a variable, at this point, it is worth thinking about that variable's type, because if that type is not the type of the unsigned operand (or larger unsigned integral type), you will incur a conversion.
+That is, while the operation is guaranteed to be correct by the standard, putting it back into anything but a large enough unsigned integral type might not yield the result you expect.
+In a smaller unsigned integral type, there is at least another modulo conversion happening.
+If the type is signed (whether it is large enough or not), then the result is implementation defined as stipulated by the standard, again in section 7.8:</p>
 <blockquote>
-<p>If the destination type is signed, the value is unchanged if it can be
-represented in the destination type; otherwise, the value is
-implementation-defined.</p>
+<p>If the destination type is signed, the value is unchanged if it can be represented in the destination type; otherwise, the value is implementation-defined.</p>
 </blockquote>
-
-<p>The standard does not specify what happens in this case and instead gives latitude
-to the compiler vendor saying the result is implementation defined.  This means
-that if you rely on this conversion, the behavior might not be portable (<strong><em>not</em></strong>
-undefined as in the case of overflow, just not portable and tied to the compiler
-you use). On <a href="http://www.cs.cornell.edu/~tomf/notes/cps104/twoscomp.html" target="_blank">two&rsquo;s complement</a> machines, this will
-actually give you wrapping behavior, but relying on this is actually non portable
-(even if, from what I understand, most hardware uses two&rsquo;s complement these
-days).  On other architectures, the behavior will be different and so portable
-code should not rely on the conversions without some kind of checks.</p>
-
-<h3 id="differing-signedness-signed-with-larger-rank-unsigned-in-range">Differing signedness, signed with larger rank, unsigned in range</h3>
-
-<p>Here, the standard says that the unsigned integral type is converted to the
-signed integral type.</p>
-
-<pre><code class="language-c++">long long int + unsigned long( value &lt; long_long_int_max )
-                           =&gt; long long int + (long long int)unsigned long
-</code></pre>
-
-<p>Given that the unsigned integer is representable in the range of the signed
-integer, the conversion will work as stipulated in section&nbsp;7.8 of the
-standard that I quoted in the previous part of this post (at least, that is my
-understanding).  So that should always give the correct answer since the unsigned
-<em>value</em> is in range of the signed <em>type</em>.</p>
-
-<h3 id="differing-signedness-signed-with-larger-rank-unsigned-not-in-range">Differing signedness, signed with larger rank, unsigned not in range</h3>
-
-<p>Here, the standard says that both operands are converted to the unsigned type of
-same rank as that of the signed integer in the operation.  The unsigned should
-be in range of the unsigned with the larger rank (i.e. the unsigned with same
-rank as the signed in the operation, which is higher than that of the unsigned
-in the operation).  The signed one will be modulo 2<sup><em>n</em></sup> converted.
-Thus the result should be right given the modulo arithmetic, but with the usual
-caveats of what you do with the result.</p>
-
-<h2 id="back-to-the-first-example">Back to the first example</h2>
-
-<p>So coming back to the first example, let&rsquo;s see if I can apply the rules to it.</p>
-
-<pre><code class="language-c++">float flt{15.f};
-long lng_a{30L};
-long lng_b = lng_a + flt;
-</code></pre>
-
-<p>According to the conversion rules, I would say that the <code>long</code> value will first
-be converted to <code>float</code> to allow the addition, and that the resulting <code>float</code>
-will be truncated<sup>[1]</sup>, which is what the standard mandates in
-section&nbsp;<strong>7.10&nbsp;Floating-integral conversions</strong>:</p>
-
+<p>The standard does not specify what happens in this case and instead gives latitude to the compiler vendor saying the result is implementation defined.
+This means that if you rely on this conversion, the behavior might not be portable (<strong><em>not</em></strong> undefined as in the case of overflow, just not portable and tied to the compiler you use). On <a href="http://www.cs.cornell.edu/%7Etomf/notes/cps104/twoscomp.html">two's complement</a> machines, this will actually give you wrapping behavior, but relying on this is actually non portable (even if, from what I understand, most hardware uses two's complement these days).
+On other architectures, the behavior will be different and so portable code should not rely on the conversions without some kind of checks.</p>
+<h3 id="Differing_signedness,_signed_with_larger_rank,_unsigned_in_range">Differing signedness, signed with larger rank, unsigned in range</h3>
+<p>Here, the standard says that the unsigned integral type is converted to the signed integral type.</p>
+<pre data-lang="c++" style="background-color:#1d1f21;color:#c5c8c6;" class="language-c++ "><code class="language-c++" data-lang="c++"><span style="color:#b294bb;">long long int </span><span style="color:#8abeb7;">+ </span><span style="color:#b294bb;">unsigned long</span><span>( value </span><span style="color:#8abeb7;">&lt;</span><span> long_long_int_max )
+</span><span>                           </span><span style="color:#8abeb7;">=&gt; </span><span style="color:#b294bb;">long long int </span><span style="color:#8abeb7;">+ </span><span>(</span><span style="color:#b294bb;">long long int</span><span>)</span><span style="color:#b294bb;">unsigned long
+</span></code></pre>
+<p>Given that the unsigned integer is representable in the range of the signed integer, the conversion will work as stipulated in section 7.8 of the standard that I quoted in the previous part of this post (at least, that is my understanding).
+So that should always give the correct answer since the unsigned <em>value</em> is in range of the signed <em>type</em>.</p>
+<h3 id="Differing_signedness,_signed_with_larger_rank,_unsigned_not_in_range">Differing signedness, signed with larger rank, unsigned not in range</h3>
+<p>Here, the standard says that both operands are converted to the unsigned type of same rank as that of the signed integer in the operation.
+The unsigned should be in range of the unsigned with the larger rank (i.e. the unsigned with same rank as the signed in the operation, which is higher than that of the unsigned in the operation).
+The signed one will be modulo 2<sup><em>n</em></sup> converted.
+Thus the result should be right given the modulo arithmetic, but with the usual caveats of what you do with the result.</p>
+<h2 id="Back_to_the_first_example">Back to the first example</h2>
+<p>So coming back to the first example, let's see if I can apply the rules to it.</p>
+<pre data-lang="c++" style="background-color:#1d1f21;color:#c5c8c6;" class="language-c++ "><code class="language-c++" data-lang="c++"><span style="color:#b294bb;">float </span><span style="color:#cc6666;">flt</span><span style="color:#81a2be;">{</span><span style="color:#de935f;">15.</span><span style="color:#b294bb;">f</span><span style="color:#81a2be;">}</span><span>;
+</span><span style="color:#b294bb;">long </span><span style="color:#cc6666;">lng_a</span><span style="color:#81a2be;">{</span><span style="color:#de935f;">30</span><span style="color:#b294bb;">L</span><span style="color:#81a2be;">}</span><span>;
+</span><span style="color:#b294bb;">long</span><span> lng_b </span><span style="color:#8abeb7;">=</span><span> lng_a </span><span style="color:#8abeb7;">+</span><span> flt;
+</span></code></pre>
+<p>According to the conversion rules, I would say that the <code>long</code> value will first be converted to <code>float</code> to allow the addition, and that the resulting <code>float</code> will be truncated<sup id="ftntref:1"><a href="#ftnt:1">1</a></sup>, which is what the standard mandates in section <strong>7.10 Floating-integral conversions</strong>:</p>
 <blockquote>
-<p>A prvalue of a floating-point type can be converted to a prvalue of an integer
-type. The conversion truncates; that is, the fractional part is discarded. The
-behavior is undefined if the truncated value cannot be represented in the
-destination type.</p>
+<p>A prvalue of a floating-point type can be converted to a prvalue of an integertype.
+The conversion truncates; that is, the fractional part is discarded.
+The behavior is undefined if the truncated value cannot be represented in the destination type.</p>
 </blockquote>
-
-<p>The numbers above are small enough that it just works as expected!  This is
-probably true for a lot of use cases, which is why I think I can stand by my
-initial affirmation that &ldquo;applying binary operations to different types might
-seem trivial in C++, because it mostly just works&rdquo;.</p>
-
-<h2 id="keep-informed">Keep informed</h2>
-
-<p>As mentioned in the previous post, there is a (controversial?) <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0907r0.html" target="_blank">proposal</a> that has
-been brought to the the C++ standards committee by JF Bastien which would make
-two&rsquo;s complement the only allowed representation for signed integers.  This could
-change some of the details of this article, namely the parts where conversion
-from unsigned to signed is implementation defined.  So in C++20 or C++23, the
-information here could be out of date (already).</p>
-
-<p>Also, because of conversions, the following assert will actually fire as the
-operation will yield false even if the mathematics would suggest otherwise:</p>
-
-<pre><code class="language-c++">assert( -1 &lt; 0u )
-</code></pre>
-
-<p>That is because this is a case where both integers have the same rank (the <code>-1</code>
-literal is <code>int</code> and the <code>0u</code> literal is <code>unsigned int</code>), but differing
-signedness.  Here, according to the rules above, the signed integer is converted
-to the unsigned integer, which means <code>-1</code> becomes the largest unsigned integer,
-which will not be smaller than 0.  This kind of surprising behavior is currently
-being discussed in the context of a <a href="http://open-std.org/JTC1/SC22/WG21/docs/papers/2017/p0515r0.pdf" target="_blank">proposal by Herb Sutter</a>.  Richard Smith
-is <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0946r0.html" target="_blank">proposing</a> to bring
-consistency between the new three-way comparison operator (a.k.a the <em>spaceship
-operator</em> <code>&lt;=&gt;</code>) and the usual C comparison operators.  This might have no
-impact on what I discussed here or might change it completely.  I will admit
-that I am aware of the proposal, but I have not had time to read it through.</p>
-
-<p>In any case, the two proposals above, if they are adopted, will change some of
-what I discussed here, so keep informed if this matters to you!</p>
-
+<p>The numbers above are small enough that it just works as expected!
+This is probably true for a lot of use cases, which is why I think I can stand by my initial affirmation that &quot;applying binary operations to different types might seem trivial in C++, because it mostly just works&quot;.</p>
+<h2 id="Keep_informed">Keep informed</h2>
+<p>As mentioned in the previous post, there is a (controversial?) <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0907r0.html">proposal</a> that has been brought to the the C++ standards committee by JF Bastien which would make two's complement the only allowed representation for signed integers.
+This could change some of the details of this article, namely the parts where conversion from unsigned to signed is implementation defined.
+So in C++20 or C++23, the information here could be out of date (already).</p>
+<p>Also, because of conversions, the following assert will actually fire as the operation will yield false even if the mathematics would suggest otherwise:</p>
+<pre data-lang="c++" style="background-color:#1d1f21;color:#c5c8c6;" class="language-c++ "><code class="language-c++" data-lang="c++"><span style="color:#cc6666;">assert</span><span style="color:#81a2be;">( </span><span style="color:#8abeb7;">-</span><span style="color:#de935f;">1 </span><span style="color:#8abeb7;">&lt; </span><span style="color:#de935f;">0</span><span style="color:#b294bb;">u </span><span style="color:#81a2be;">)
+</span></code></pre>
+<p>That is because this is a case where both integers have the same rank (the <code>-1</code> literal is <code>int</code> and the <code>0u</code> literal is <code>unsigned int</code>), but differing signedness.
+Here, according to the rules above, the signed integer is converted to the unsigned integer, which means <code>-1</code> becomes the largest unsigned integer, which will not be smaller than 0.
+This kind of surprising behavior is currently being discussed in the context of a <a href="http://open-std.org/JTC1/SC22/WG21/docs/papers/2017/p0515r0.pdf">proposal by Herb Sutter</a>.
+Richard Smith is <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0946r0.html">proposing</a> to bring consistency between the new three-way comparison operator (a.k.a the <em>spaceship operator</em> <code>&lt;=&gt;</code>) and the usual C comparison operators.
+This might have no impact on what I discussed here or might change it completely.
+I will admit that I am aware of the proposal, but I have not had time to read it through.</p>
+<p>In any case, the two proposals above, if they are adopted, will change some of what I discussed here, so keep informed if this matters to you!</p>
 <hr />
+<h2 id="Notes">Notes</h2>
+<p>I would like to thank <a href="https://twitter.com/PatriceRoy1">Patrice Roy</a> for reading my post and giving me some advice on it. His time is greatly appreciated.</p>
+<p><p id="ftnt:1"><sup>[1]</sup>&nbsp;<a href="https://tinyurl.com/ycdz8rky">Here is a link</a> to the code of the first example in compiler explorer (put in a main function so it compiles).
+You can see the <code>cvtsi2ss</code>, <code>addss</code> and <code>cvttss2si</code> instructions which respectively convert the <code>long</code> to a <code>float</code>, adds the resulting <code>float</code> with the <code>flt</code> variable, and converts back the result to a <code>long</code>.&nbsp;<a href="#ftntref:1">&#8617;&#65038;</a></p>
 
-<h2 id="notes">Notes</h2>
+<p id="ftnt:2"><sup>[2]</sup>&nbsp;I believe assembly instructions, assembly code, machine code, and opcodes are roughly the same (according to Wikipedia, some assembly instructions do not map directly to opcodes, but most do).
+In the context of this post, I don't think it makes much of a difference.
+Thus, I use the terms interchangeably, but I might be assuming a bit.
+I am out of my depths in this domain.&nbsp;<a href="#ftntref:2">&#8617;&#65038;</a></p>
+</p>
+<p id="ftnt:3"><sup>[3]</sup>&nbsp;The official published document must be purchased from the ISO organization, but the draft papers are freely available and can be found on the web.
+For instance, a C++17 draft paper (the latest draft before publication I believe, but I might be wrong) can be found <a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf">here</a>.&nbsp;<a href="#ftntref:3">&#8617;&#65038;</a></p>
 
-<p>I would like to thank <a href="https://twitter.com/PatriceRoy1" target="_blank">Patrice Roy</a> for reading
-my post and giving me some advice on it. His time is greatly appreciated.</p>
-
-<p><sup>[1]</sup> <a href="https://tinyurl.com/ycdz8rky" target="_blank">Here is a link</a> to the code of the
-first example in compiler explorer (put in a main function so it compiles).  You
-can see the <code>cvtsi2ss</code>, <code>addss</code> and <code>cvttss2si</code> instructions which respectively
-convert the <code>long</code> to a <code>float</code>, adds the resulting <code>float</code>, and the <code>flt</code>
-variable and converts back the result to a <code>long</code>.</p>
-
-<p><sup>[2]</sup> I believe assembly instructions, assembly code, machine code, and
-opcodes are roughly the same (according to Wikipedia, some assembly instructions
-do not map directly to opcodes, but most do).  In the context of this post, I
-don&rsquo;t think it makes much of a difference.  Thus, I use the terms interchangeably,
-but I might be assuming a bit.  I am out of my depths in this domain.</p>
-
-<p><sup>[3]</sup> The official published document must be purchased from the ISO
-organization, but the draft papers are freely available and can be found on the
-web.  For instance, a C++17 draft paper (the latest draft before publication I
-believe, but I might be wrong) can be found
-<a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf" target="_blank">here</a>.</p>
-
-      </p>
     </article>
-
-
   </main>
 
-<footer>
-  <div class="footer_text">
+
+  <footer>
+    <div class="footer_text">
       <div>
-        <h3>Hi, <a href="https://ghlecl.github.io/about">I'm Ghyslain</a></h3>
+        <h3>Hi, <a href="https://ghlecl.github.io/about/">I'm Ghyslain</a></h3>
         <p>
           I am a medical physicist by day and a hobby programmer by night.
-
-
-You can follow me on <a href="http://twitter.com/ghlecl" target="_blank">Twitter</a> and on <a href="http://github.com/ghlecl" target="_blank">GitHub</a>.  You can reach me via codeattempts [at] gmail [dot] com.
-
+          You can follow me on <a href="http://twitter.com/ghlecl" target="_blank">Twitter</a>
+          and on <a href="http://github.com/ghlecl" target="_blank">GitHub</a>.
+          You can reach me via codeattempts [at] gmail [dot] com.
         </p>
-      </div>
-      
-  </div>
-
-  
-    <div class="footer_copyright">
-      &copy; 2018 <a href="https://ghlecl.github.io/about">Ghyslain Leclerc</a>
-       - Made in Québec, Canada
+        </div>
     </div>
-  
-</footer>
+    <div class="footer_copyright">
+      &copy; 2022 <a href="https://ghlecl.github.io/about/">Ghyslain Leclerc</a>
+      &mdash; Made in Québec, Canada
+      &mdash; Generated using <a href="https://www.getzola.org/" target="_blank">Zola</a>
+      &mdash; Style ported from <a href="https://jnjosh.com/about/" target="_blank">Josh Johnson's</a>
+      Hugo Theme (<a href="https://github.com/jnjosh/internet-weblog"target="_blank">internet-weblog</a>)
+    </div>
+  </footer>
 
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/2.2.0/jquery.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/lightgallery/1.2.14/js/lightgallery-all.min.js" charset="utf-8"></script>
-    <script src="https://ghlecl.github.io/js/weblog.js" charset="utf-8"></script>
-    
-<script src="https://ghlecl.github.io/js/prism.js"></script>
+</body>
 
-    <script type="text/javascript">
-
-  
-  $(function() {
-    
-    $.getJSON("https://api.flickr.com/services/feeds/photos_public.gne?id=&format=json&jsoncallback=?", function(data) {
-      iweblog.application.displayImages(data, 8);
-    });
-  });
-
-</script>
-
-    
-  </body>
 </html>
-

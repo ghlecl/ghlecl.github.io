@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Ghyslain Leclerc">
+  <meta name="description" content="Personnal notes on code">
+  <link rel="alternate" type="application/atom+xml" title="RSS" href="https://ghlecl.github.io/atom.xml">
+  <link rel="stylesheet" href="https://ghlecl.github.io/css/weblog.css" media="screen" charset="utf-8" />
+  <title>One of std::string ctor &middot; ghlecl's code attempts</title>
+</head>
+
+<body class="site">
+  <header>
+    <nav>
+      <h1><a href="/">@ghlecl</a>'s Code Attempts.</h1>
+      <div class="menu">
+        <ul>
+          <li>
+            <a href="https://ghlecl.github.io/posts/">Posts<img src="/img/atom.svg" class="rss-icon" /></a>
+          </li>
+          <li><a href="https://ghlecl.github.io/about/">About</a></li>
+        </ul>
+      </div>
+    </nav>
+  </header>
+  
+  <main class="content">
+    <article class="post">
+      <h1 class="title">One of std::string ctor</h1>
+      <div class="postmeta">
+        Posted on <time datetime="2018-09-18 21:45" pubdate="">2018-09-18</time>
+      </div>
+      <h1 id="std::string_from_C_style_string_ctor">std::string from C style string ctor</h1>
+<p>In writing a function template having to create a <code>std::string</code> from a <code>char[]</code>, I have had to use the following constructor of <code>std::string</code>:</p>
+<pre data-lang="c++" style="background-color:#1d1f21;color:#c5c8c6;" class="language-c++ "><code class="language-c++" data-lang="c++"><span style="color:#cc6666;">basic_string</span><span style="color:#81a2be;">( CharT </span><span style="color:#b294bb;">const</span><span style="color:#8abeb7;">*</span><span style="color:#81a2be;"> s, size_type count, Allocator </span><span style="color:#b294bb;">const</span><span style="color:#8abeb7;">&amp;</span><span style="color:#81a2be;"> alloc </span><span style="color:#8abeb7;">= </span><span style="color:#cc6666;">Allocator</span><span style="color:#81a2be;">() )</span><span>;
+</span></code></pre>
+<p>which you can find documentation for in the standard or on <a href="https://en.cppreference.com/w/cpp/string/basic_string/basic_string">cppreference.com</a>.
+In using this constructor, I have had a &quot;off by one&quot; problem with the <code>count</code> parameter.
+The function template I originally wrote used the constructor like this:</p>
+<pre data-lang="c++" style="background-color:#1d1f21;color:#c5c8c6;" class="language-c++ "><code class="language-c++" data-lang="c++"><span style="color:#b294bb;">template</span><span>&lt; std::</span><span style="color:#f0c674;">size_t</span><span> N &gt;
+</span><span>std::string </span><span style="color:#81a2be;">foo</span><span>( </span><span style="color:#b294bb;">char const </span><span>( </span><span style="color:#8abeb7;">&amp;</span><span>char_arr )[N] ) {
+</span><span>   </span><span style="color:#b294bb;">return </span><span style="color:#81a2be;">std::</span><span style="color:#cc6666;">string</span><span style="color:#81a2be;">( char_arr, N )</span><span>;  </span><span style="color:#969896;">// WRONG, do not do this
+</span><span>}
+</span></code></pre>
+<p>which is a mistake.
+The terminating <code>'\0'</code> character will be included in the value of <code>N</code> and will thus be part of the <code>std::string</code> (which <em>can</em> contain nulls).
+Thus, the size of the new <code>std::string</code> will be one more then expected:</p>
+<pre data-lang="c++" style="background-color:#1d1f21;color:#c5c8c6;" class="language-c++ "><code class="language-c++" data-lang="c++"><span style="color:#b294bb;">char const</span><span> arr[] </span><span style="color:#8abeb7;">= </span><span style="color:#b5bd68;">&quot;string&quot;</span><span>;
+</span><span style="color:#b294bb;">auto</span><span> bar </span><span style="color:#8abeb7;">= </span><span style="color:#cc6666;">foo</span><span style="color:#81a2be;">( arr )</span><span>;
+</span><span style="color:#cc6666;">assert</span><span style="color:#81a2be;">( bar.</span><span style="color:#cc6666;">length</span><span style="color:#81a2be;">() </span><span style="color:#8abeb7;">!= </span><span style="color:#de935f;">6 </span><span style="color:#81a2be;">)</span><span>;
+</span><span style="color:#cc6666;">assert</span><span style="color:#81a2be;">( bar.</span><span style="color:#cc6666;">length</span><span style="color:#81a2be;">() </span><span style="color:#8abeb7;">== </span><span style="color:#de935f;">7 </span><span style="color:#81a2be;">)</span><span>;
+</span></code></pre>
+<p>Usually, when one is certain that the C style string is null terminated, the recommended way to use the constructor is:</p>
+<pre data-lang="c++" style="background-color:#1d1f21;color:#c5c8c6;" class="language-c++ "><code class="language-c++" data-lang="c++"><span>std::string </span><span style="color:#81a2be;">the_strg</span><span>( </span><span style="color:#de935f;">char_arr</span><span>, </span><span style="color:#81a2be;">std::strlen( char_arr ) </span><span>);
+</span></code></pre>
+<p>Since <code>std::strlen</code> will not include the null terminator in the length returned.
+To mimic this behavior, my template had to be written as:</p>
+<pre data-lang="c++" style="background-color:#1d1f21;color:#c5c8c6;" class="language-c++ "><code class="language-c++" data-lang="c++"><span style="color:#b294bb;">template</span><span>&lt; std::</span><span style="color:#f0c674;">size_t</span><span> N &gt;
+</span><span>std::string </span><span style="color:#81a2be;">foo</span><span>( </span><span style="color:#b294bb;">char const </span><span>( </span><span style="color:#8abeb7;">&amp;</span><span>char_arr )[N] ) {
+</span><span>   </span><span style="color:#b294bb;">return </span><span style="color:#81a2be;">std::</span><span style="color:#cc6666;">string</span><span style="color:#81a2be;">( char_arr, N </span><span style="color:#8abeb7;">- </span><span style="color:#de935f;">1 </span><span style="color:#81a2be;">)</span><span>;
+</span><span>}
+</span></code></pre>
+<p>which will eliminate the need to calculate the length at runtime and yield the correct <code>std::string</code> with the expected length.
+This is not exactly a hard problem, but it bit me and I want to remember this little detail!</p>
+<hr />
+<p>Edit (2018-09-19):
+<a href="https://twitter.com/PatriceRoy1">Patrice Roy</a> pointed out that my return statement in the first function was awkward (copy pasting and modifying to make an example is not ideal) and the second version was not returning anything.
+Fixed now.
+Thanks Patrice for pointing it out.</p>
+
+    </article>
+  </main>
+
+
+  <footer>
+    <div class="footer_text">
+      <div>
+        <h3>Hi, <a href="https://ghlecl.github.io/about/">I'm Ghyslain</a></h3>
+        <p>
+          I am a medical physicist by day and a hobby programmer by night.
+          You can follow me on <a href="http://twitter.com/ghlecl" target="_blank">Twitter</a>
+          and on <a href="http://github.com/ghlecl" target="_blank">GitHub</a>.
+          You can reach me via codeattempts [at] gmail [dot] com.
+        </p>
+        </div>
+    </div>
+    <div class="footer_copyright">
+      &copy; 2022 <a href="https://ghlecl.github.io/about/">Ghyslain Leclerc</a>
+      &mdash; Made in Québec, Canada
+      &mdash; Generated using <a href="https://www.getzola.org/" target="_blank">Zola</a>
+      &mdash; Style ported from <a href="https://jnjosh.com/about/" target="_blank">Josh Johnson's</a>
+      Hugo Theme (<a href="https://github.com/jnjosh/internet-weblog"target="_blank">internet-weblog</a>)
+    </div>
+  </footer>
+
+</body>
+
+</html>

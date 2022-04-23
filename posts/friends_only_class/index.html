@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Ghyslain Leclerc">
+  <meta name="description" content="Personnal notes on code">
+  <link rel="alternate" type="application/atom+xml" title="RSS" href="https://ghlecl.github.io/atom.xml">
+  <link rel="stylesheet" href="https://ghlecl.github.io/css/weblog.css" media="screen" charset="utf-8" />
+  <title>Friends only class &middot; ghlecl's code attempts</title>
+</head>
+
+<body class="site">
+  <header>
+    <nav>
+      <h1><a href="/">@ghlecl</a>'s Code Attempts.</h1>
+      <div class="menu">
+        <ul>
+          <li>
+            <a href="https://ghlecl.github.io/posts/">Posts<img src="/img/atom.svg" class="rss-icon" /></a>
+          </li>
+          <li><a href="https://ghlecl.github.io/about/">About</a></li>
+        </ul>
+      </div>
+    </nav>
+  </header>
+  
+  <main class="content">
+    <article class="post">
+      <h1 class="title">Friends only class</h1>
+      <div class="postmeta">
+        Posted on <time datetime="2017-11-28 13:30" pubdate="">2017-11-28</time>
+      </div>
+      <h1 id="Friends_only_class">Friends only class</h1>
+<p>Having read <a href="https://arne-mertz.de/2016/11/stronger-types/">a few</a> <a href="http://www.fluentcpp.com/2016/12/05/named-constructors/">blog posts</a> and watched a short <a href="https://youtube.com/watch?v=jLdSjh8oqmE">presentation</a> on the subject of <a href="http://foonathan.net/blog/2016/10/19/strong-typedefs.html">strong typedefs</a>, I decided to look into their use and implementation.
+In at least two implementations I have looked at (namely <a href="https://github.com/foonathan/type_safe">type_safe</a> and <a href="https://sourceforge.net/projects/opaque-typedef/">opaque</a>), I have found that mixin classes are used to add functionality to the new type.
+For instance:</p>
+<pre data-lang="C++" style="background-color:#1d1f21;color:#c5c8c6;" class="language-C++ "><code class="language-C++" data-lang="C++"><span style="color:#b294bb;">class </span><span style="color:#f0c674;">my_strong_typedef </span><span>: </span><span style="color:#b294bb;">public </span><span style="color:#b5bd68;">addable</span><span>, </span><span style="color:#b294bb;">public </span><span style="color:#b5bd68;">divisible
+</span><span>{};
+</span></code></pre>
+<p>Those mixin were implemented as empty classes that only have friend functions in them.
+I was wondering what was the use of such constructs.
+Turns out, it is an application of the <a href="https://en.wikipedia.org/wiki/Barton%E2%80%93Nackman_trick">Barton–Nackman trick</a> to allow <a href="https://en.wikipedia.org/wiki/Argument-dependent_name_lookup">argument dependent name lookup</a> (ADL) to find the function.</p>
+<p>When the compiler sees the following expression:</p>
+<pre data-lang="C++" style="background-color:#1d1f21;color:#c5c8c6;" class="language-C++ "><code class="language-C++" data-lang="C++"><span>lt </span><span style="color:#8abeb7;">+</span><span> rt
+</span></code></pre>
+<p>it must lookup the <code>operator+</code> function to use with the types of <code>lt</code> and <code>rt</code>.
+From my understanding, it is equivalent to an unqualified call to the operator, as in:</p>
+<pre data-lang="C++" style="background-color:#1d1f21;color:#c5c8c6;" class="language-C++ "><code class="language-C++" data-lang="C++"><span>operator</span><span style="color:#8abeb7;">+</span><span>( lt, rt )
+</span></code></pre>
+<p>The various <a href="http://en.cppreference.com/w/cpp/language/lookup">name lookup</a> rules of C++, which are not so simple, are then used to find which function to call and an important aspect in this case is that during ADL:</p>
+<blockquote>
+<p>namespace-scoped friend functions (and function templates) that are declared in an associated class are visible through ADL even if they are not visible through ordinary lookup</p>
+</blockquote>
+<p>which is a quote from the cppreference website.
+Because of that part of the standard, an operator defined as a friend in a class of which your class inherits is found.
+With this trick, you can, as other libraries have done, create multiple mixin classes from which your primary class inherits and ADL will find the functions.
+The empty classes should mostly (if not completely) be optimized away by the compiler.</p>
+
+    </article>
+  </main>
+
+
+  <footer>
+    <div class="footer_text">
+      <div>
+        <h3>Hi, <a href="https://ghlecl.github.io/about/">I'm Ghyslain</a></h3>
+        <p>
+          I am a medical physicist by day and a hobby programmer by night.
+          You can follow me on <a href="http://twitter.com/ghlecl" target="_blank">Twitter</a>
+          and on <a href="http://github.com/ghlecl" target="_blank">GitHub</a>.
+          You can reach me via codeattempts [at] gmail [dot] com.
+        </p>
+        </div>
+    </div>
+    <div class="footer_copyright">
+      &copy; 2022 <a href="https://ghlecl.github.io/about/">Ghyslain Leclerc</a>
+      &mdash; Made in Québec, Canada
+      &mdash; Generated using <a href="https://www.getzola.org/" target="_blank">Zola</a>
+      &mdash; Style ported from <a href="https://jnjosh.com/about/" target="_blank">Josh Johnson's</a>
+      Hugo Theme (<a href="https://github.com/jnjosh/internet-weblog"target="_blank">internet-weblog</a>)
+    </div>
+  </footer>
+
+</body>
+
+</html>

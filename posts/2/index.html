@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="author" content="Ghyslain Leclerc">
+  <meta name="description" content="Personnal notes on code">
+  <link rel="alternate" type="application/atom+xml" title="RSS" href="https://ghlecl.github.io/atom.xml">
+  <link rel="stylesheet" href="https://ghlecl.github.io/css/weblog.css" media="screen" charset="utf-8" />
+  <title> Code Attempts &middot; ghlecl's code attempts</title>
+</head>
+
+<body class="site">
+  <header>
+    <nav>
+      <h1><a href="/">@ghlecl</a>'s Code Attempts.</h1>
+      <div class="menu">
+        <ul>
+          <li>
+            <a href="https://ghlecl.github.io/posts/">Posts<img src="/img/atom.svg" class="rss-icon" /></a>
+          </li>
+          <li><a href="https://ghlecl.github.io/about/">About</a></li>
+        </ul>
+      </div>
+    </nav>
+  </header>
+  
+  <main class="content list">
+    
+    <article class="post">
+      <h2>
+        <a rel="full-article" href="https://ghlecl.github.io/posts/integer_representations/">Integer binary representations</a>
+      </h2>
+      <div class="postmeta">
+        Posted on <time datetime="2018-04-30 00:00" pubdate="">April 30, 2018</time>
+      </div>
+      <p>
+        
+   Integer binary representations
+I had never had to look closely at integer binary representations in computers.
+The mental model I had for them was not wrong, but it turns out it was sub-optimal and there are better ways to do things.
+If you use high level abstractions and do not mainly work with fundamental types, or if you do not convert between integer types, you do not have to be mindful of the binary representation of
+      </p>
+      <a class="continue" rel="full-article" href="https://ghlecl.github.io/posts/integer_representations/">Continue Reading »</a>
+    </article>
+    
+    <article class="post">
+      <h2>
+        <a rel="full-article" href="https://ghlecl.github.io/posts/friends_only_class/">Friends only class</a>
+      </h2>
+      <div class="postmeta">
+        Posted on <time datetime="2017-11-28 13:30" pubdate="">November 28, 2017</time>
+      </div>
+      <p>
+        
+   Friends only class
+Having read a few blog posts and watched a short presentation on the subject of strong typedefs, I decided to look into their use and implementation.
+In at least two implementations I have looked at (namely type_safe and opaque), I have found that mixin classes are used to add functionality to the new type.
+For instance:
+class my_strong_typedef : public addable, public divisible
+{};
+
+Those mixin were implemented as empty classes that only have friend functions
+      </p>
+      <a class="continue" rel="full-article" href="https://ghlecl.github.io/posts/friends_only_class/">Continue Reading »</a>
+    </article>
+    
+    <article class="post">
+      <h2>
+        <a rel="full-article" href="https://ghlecl.github.io/posts/count_chars_in_n_first_lines/">Count chars in lines</a>
+      </h2>
+      <div class="postmeta">
+        Posted on <time datetime="2017-11-22 12:30" pubdate="">November 22, 2017</time>
+      </div>
+      <p>
+        
+   Counting chars in first n lines
+I was coding in one of my projects and wanted to make sure that the position I was finding in a file was correct.
+In a first attempt, I tried copy-pasting the content of the file up to the position I was searching for into Microsoft Excel™ to find the length of the resulting string.
+Turns out a naive copy-paste does not preserve whitespace.
+I then thought of writing a small
+      </p>
+      <a class="continue" rel="full-article" href="https://ghlecl.github.io/posts/count_chars_in_n_first_lines/">Continue Reading »</a>
+    </article>
+    
+    <article class="post">
+      <h2>
+        <a rel="full-article" href="https://ghlecl.github.io/posts/return_type_overload/">Return type overloading</a>
+      </h2>
+      <div class="postmeta">
+        Posted on <time datetime="2017-10-12 00:00" pubdate="">October 12, 2017</time>
+      </div>
+      <p>
+        
+   No return type overloading
+In C++, return type does not participate in function overload resolution, i.e. it is not possible to overload a function on the return type.
+Thus, this is not legal C++:
+void to_lower( std::string&amp; strg );
+std::string to_lower( std::string&amp; strg );
+
+The compiler will issue an error when it sees the second declaration.1
+For instance, the error Clang emits is the following: &quot;error: functions that differ only in their return type cannot be overloaded&quot;.
+The detailed reasons
+      </p>
+      <a class="continue" rel="full-article" href="https://ghlecl.github.io/posts/return_type_overload/">Continue Reading »</a>
+    </article>
+    
+    <article class="post">
+      <h2>
+        <a rel="full-article" href="https://ghlecl.github.io/posts/rvalue_references_in_cxx/">rvalue references in C++</a>
+      </h2>
+      <div class="postmeta">
+        Posted on <time datetime="2017-01-10 22:30" pubdate="">January 10, 2017</time>
+      </div>
+      <p>
+        
+   move, rvalues, forward and C++
+Ever since I heard about it, the concept of move semantics has been intriguing and appealing to me.
+I confess to liking new C++ things and micro-optimizations way too much... but still, the concept of &quot;moving&quot; memory instead of copying it in order to gain efficiency is at least worth exploring, right?
+Anyhow, I chose a function of mine and decided to try and make it handle move semantics properly.
+The function
+      </p>
+      <a class="continue" rel="full-article" href="https://ghlecl.github.io/posts/rvalue_references_in_cxx/">Continue Reading »</a>
+    </article>
+    
+  <div class="pagination">
+  
+    <a href="https:&#x2F;&#x2F;ghlecl.github.io&#x2F;">« Newer</a>
+  
+
+  
+  <span>|</span>
+  
+
+  
+    <a href="https:&#x2F;&#x2F;ghlecl.github.io&#x2F;posts&#x2F;3&#x2F;">Older »</a>
+  
+  </div>
+  </main>
+
+
+  <footer>
+    <div class="footer_text">
+      <div>
+        <h3>Hi, <a href="https://ghlecl.github.io/about/">I'm Ghyslain</a></h3>
+        <p>
+          I am a medical physicist by day and a hobby programmer by night.
+          You can follow me on <a href="http://twitter.com/ghlecl" target="_blank">Twitter</a>
+          and on <a href="http://github.com/ghlecl" target="_blank">GitHub</a>.
+          You can reach me via codeattempts [at] gmail [dot] com.
+        </p>
+        </div>
+    </div>
+    <div class="footer_copyright">
+      &copy; 2022 <a href="https://ghlecl.github.io/about/">Ghyslain Leclerc</a>
+      &mdash; Made in Québec, Canada
+      &mdash; Generated using <a href="https://www.getzola.org/" target="_blank">Zola</a>
+      &mdash; Style ported from <a href="https://jnjosh.com/about/" target="_blank">Josh Johnson's</a>
+      Hugo Theme (<a href="https://github.com/jnjosh/internet-weblog"target="_blank">internet-weblog</a>)
+    </div>
+  </footer>
+
+</body>
+
+</html>
